@@ -1,0 +1,3 @@
+{
+  "name":"趣味麻将碰 - Fun Mahjong Pong","short_name":"麻将碰","description":"一款轻松有趣的麻将配对闯关游戏","start_url":"./","display":"standalone","background_color":"#edf5ed","theme_color":"#75a98d","orientation":"portrait-primary","lang":"zh-CN","icons":[{"src":"assets/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#75a98d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="趣味麻将碰，一款轻松有趣的麻将配对游戏">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icon.svg">
+  <link rel="apple-touch-icon" href="assets/icon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles-v37.css">
+  <link rel="stylesheet" href="styles-v38.css">
+  <link rel="stylesheet" href="styles-v39.css">
+  <link rel="stylesheet" href="styles-v40.css">
+  <link rel="stylesheet" href="styles-v41.css">
+  <link rel="stylesheet" href="styles-v42.css">
+  <link rel="stylesheet" href="styles-v43.css">
+  <link rel="stylesheet" href="styles-v44.css">
+  <link rel="stylesheet" href="styles-v45.css">
+  <link rel="stylesheet" href="styles-v46.css">
+  <link rel="stylesheet" href="styles-v47.css">
+  <link rel="stylesheet" href="styles-v48.css">
+  <link rel="stylesheet" href="styles-v49.css">
+  <link rel="stylesheet" href="styles-v50.css">
+  <link rel="stylesheet" href="styles-v51.css">
+  <link rel="stylesheet" href="styles-v52.css">
+  <link rel="stylesheet" href="styles-v53.css">
+  <link rel="stylesheet" href="styles-v54.css">
+  <link rel="stylesheet" href="styles-v55.css">
+  <link rel="stylesheet" href="styles-v56.css">
+  <link rel="stylesheet" href="styles-v57.css">
+  <title>趣味麻将碰 · Fun Mahjong Pong</title>
+</head>
+<body>
+  <div id="app">
+    <section id="welcome" class="screen welcome is-active" aria-label="欢迎页">
+      <header class="journey-header">
+        <button id="checkinBtn" class="welcome-checkin" aria-label="每日签到"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/><path d="m8 15 2.3 2L16 12"/></svg><span id="checkinStatus">未签到</span></button><div class="life-badge" aria-label="今日体力"><button class="energy-summary" data-open="lifeInfoSheet" aria-label="查看今日体力"><span class="energy-core"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.2 2-8 11.2h5.3L9.8 22l8-11.4h-5.2Z"/></svg></span><strong class="lifeCount">5</strong></button><button class="energy-add" aria-label="观看视频增加体力">+</button></div>
+        <div class="brand-lockup"><span class="brand-symbol">碰</span><span><b>趣味麻将碰</b></span></div>
+        <button class="welcome-share" data-open="shareSheet" aria-label="分享"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.3 10.8 7.4-4.4M8.3 13.2l7.4 4.4"/></svg></button><button class="welcome-settings" data-open="soundSheet" aria-label="设置">⚙</button>
+      </header>
+      <div class="journey-intro">
+        <p class="eyebrow">LEVEL JOURNEY</p>
+        <h1>趣味闯关</h1>
+        <p id="recordSummary">从第50关开始体验</p>
+      </div>
+      <main id="journeyMap" class="journey-map" aria-label="关卡地图"></main>
+      <div class="journey-continue">
+        <button id="startBtn" class="primary-btn"><span id="startLabel">挑战第 1 关</span><span aria-hidden="true">→</span></button>
+        <button id="newJourneyBtn" class="hidden" aria-hidden="true"></button>
+      </div>
+      <div class="welcome-footer">
+        <button class="icon-text" data-open="rulesSheet">玩法 ?</button>
+      </div>
+    </section>
+
+    <section id="records" class="screen subpage" aria-label="我的记录">
+      <header class="sub-header"><button class="circle-btn sub-back" aria-label="返回">‹</button><div><small>MY JOURNEY</small><h2>我的记录</h2></div><span class="header-spacer"></span></header>
+      <div class="record-hero dongson-pattern"><span>当前最高</span><strong id="highestLevel">第 1 关</strong><p id="recordMeta">完成 0 关 · 累计 00:00</p></div>
+      <div class="section-heading"><h3>关卡最佳</h3><span>最快用时</span></div>
+      <div id="recordList" class="record-list"></div>
+    </section>
+
+    <section id="ranking" class="screen subpage ranking" aria-label="排行榜">
+      <header class="sub-header"><button class="circle-btn sub-back" aria-label="返回">‹</button><div><small>WEEKLY RANKING</small><h2>排行榜</h2></div><button id="rankInfoBtn" class="circle-btn small-info">?</button></header>
+      <div class="ranking-tabs"><button class="active">总榜</button><button>本周</button><button>好友</button></div>
+      <div id="podium" class="podium"></div>
+      <div class="rank-rule">优先按通关数排名；通关数相同，用时更少者靠前</div>
+      <div id="rankList" class="rank-list"></div>
+    </section>
+
+    <section id="game" class="screen game" aria-label="游戏页">
+      <header class="game-header">
+        <div class="life-badge game-life" aria-label="剩余体力"><button class="energy-summary" data-open="lifeInfoSheet" aria-label="查看剩余体力"><span class="energy-core"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.2 2-8 11.2h5.3L9.8 22l8-11.4h-5.2Z"/></svg></span><strong class="lifeCount">5</strong></button><button class="energy-add" aria-label="观看视频增加体力">+</button></div>
+        <div class="level-title"><strong id="levelName">第 50 关</strong></div>
+        <button class="circle-btn settings-btn" data-open="pauseSheet" aria-label="游戏设置">⚙</button>
+      </header>
+      <div class="status-row">
+        <div class="total-stat"><span class="status-label">总数</span><strong id="totalCount">60</strong></div>
+        <div class="type-stat"><span class="status-label">种类</span><strong id="remainingTypes">30</strong></div>
+        <div class="remaining-stat"><span class="status-label">剩余</span><strong id="remainingCount">60</strong></div>
+        <span id="timer" class="hidden" aria-hidden="true">00:00</span>
+      </div>
+      <main id="boardWrap" class="board-wrap">
+        <div class="ambient-ring ring-one"></div><div class="ambient-ring ring-two"></div>
+        <div id="board" class="board" role="grid" aria-label="麻将棋盘"></div>
+        <div id="toast" class="toast" role="status"></div>
+        <div id="coach" class="coach hidden"><span></span><p id="coachText">选择两张相同的牌</p></div>
+      </main>
+      <nav class="tool-dock" aria-label="游戏工具">
+        <button id="hintBtn" class="tool-btn featured"><span class="tool-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10.5 20.5c-2.2-1.7-3.5-4.2-3.5-7.1A9 9 0 0 1 16 4a9 9 0 0 1 9 9.4c0 2.9-1.4 5.5-3.6 7.1-1.2.9-1.8 1.8-2 3.1h-6.9c-.2-1.3-.8-2.2-2-3.1Z"/><path d="M12.7 26.5h6.6M14.2 29h3.6"/></svg><b id="hintCount" class="tool-count">2</b></span><span>提示</span></button>
+        <button id="shuffleBtn" class="tool-btn"><span class="tool-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 9h4.2c6.5 0 5.4 14 12 14H26"/><path d="m22 19 4 4-4 4M6 23h4.2c2.2 0 3.6-1.7 4.8-4M18 11c1.1-1.3 2.3-2 4.2-2H26"/><path d="m22 5 4 4-4 4"/></svg><b id="shuffleCount" class="tool-count">2</b></span><span>洗牌</span></button>
+      </nav>
+    </section>
+
+    <section id="result" class="screen result" aria-label="结算页">
+      <div class="result-dialog">
+        <div class="confetti" aria-hidden="true"></div>
+        <div class="result-badge">✓</div>
+        <p class="eyebrow">LEVEL COMPLETE</p>
+        <h2>本局完成</h2>
+        <div id="stars" class="stars">★ ★ ★</div>
+        <p id="resultQuote" class="result-quote">很好的开始，下一局会更有趣。</p>
+        <button id="nextBtn" class="primary-btn energy-cost-btn"><span class="cta-copy"><b>下一关</b><small>消耗1点体力</small></span><span>→</span></button>
+        <button id="replayBtn" class="text-btn replay-energy"><span>再玩一次</span><small>消耗1点体力</small></button>
+        <button id="resultHomeBtn" class="text-btn result-home">返回主页</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="overlay" class="overlay" aria-hidden="true"></div>
+  <aside id="rulesSheet" class="sheet" aria-label="玩法说明">
+    <button class="sheet-close" data-close>×</button><h2>轻点配对，清空牌面</h2>
+    <div class="rule-list">
+      <div class="rule-card"><b>1</b><div class="rule-visual pair-visual"><img src="assets/tiles/bamboo-2.png" alt="二索"><img src="assets/tiles/bamboo-2.png" alt="二索"></div><p><strong>找到相同牌</strong><span>选择两张图案相同的麻将牌</span></p></div>
+      <div class="rule-card"><b>2</b><div class="rule-visual free-visual"><i></i><i></i><img src="assets/tiles/bamboo-1.png" alt="自由牌"><em>←</em><em>→</em></div><p><strong>只选自由牌</strong><span>上方无遮挡，且左右至少一侧开放</span></p></div>
+      <div class="rule-card"><b>3</b><div class="rule-visual clear-visual"><span class="rule-cup">★</span></div><p><strong>清空即通关</strong><span>遇到困难，可以使用提示或洗牌</span></p></div>
+    </div>
+    <button class="secondary-btn" data-close>知道了</button>
+  </aside>
+  <aside id="pauseSheet" class="sheet compact game-settings" aria-label="游戏设置">
+    <button class="sheet-close" data-close>×</button><h2>游戏设置</h2>
+    <label class="toggle-row"><span class="game-setting-icon game-sound-icon">◖</span><span class="game-setting-copy"><strong>音效</strong><small>配对与翻牌声音</small></span><input id="gameSoundToggle" type="checkbox" checked><i></i></label>
+    <label class="toggle-row"><span class="game-setting-icon game-vibration-icon">▰</span><span class="game-setting-copy"><strong>振动</strong><small>点击与成功配对震动</small></span><input id="gameHapticToggle" type="checkbox" checked><i></i></label>
+    <button class="menu-row" id="restartBtn"><span class="game-setting-icon restart-icon">↻</span><span class="game-setting-copy"><strong>重新开始</strong><small>重新摆放本局麻将</small></span><b>↻</b></button>
+    <button class="menu-row" id="pauseHomeBtn"><span class="game-setting-icon home-icon">⌂</span><span class="game-setting-copy"><strong>返回首页</strong><small>保存当前闯关进度</small></span><b>⌂</b></button>
+  </aside>
+  <aside id="soundSheet" class="sheet compact home-settings" aria-label="设置">
+    <button class="sheet-close" data-close>×</button><h2>设置</h2>
+    <label class="toggle-row"><span class="setting-icon sound-icon">◖</span><span class="setting-copy"><strong>音效</strong><small>牌面轻触与配对反馈</small></span><input id="soundToggle" type="checkbox" checked><i></i></label>
+    <label class="toggle-row"><span class="setting-icon vibration-icon">▰</span><span class="setting-copy"><strong>振动</strong><small>支持设备上的轻微振动</small></span><input id="hapticToggle" type="checkbox" checked><i></i></label>
+    <button id="languageBtn" class="cloud-save-row"><span class="setting-icon language-icon">◎</span><span class="setting-copy"><strong>语言</strong><small id="languageStatus">自动检测</small></span><b>›</b></button>
+    <button id="cloudSaveBtn" class="cloud-save-row"><span class="setting-icon cloud-icon">☁</span><span class="setting-copy"><strong>保持进度</strong><small id="cloudSaveStatus">仅保存在此设备</small></span><b>›</b></button>
+    <button id="aboutBtn" class="cloud-save-row"><span class="setting-icon about-icon">i</span><span class="setting-copy"><strong>关于</strong><small>版本与法律信息</small></span><b>›</b></button>
+    <button id="googleLogoutBtn" class="menu-row cloud-logout hidden"><span class="setting-icon google-icon">G</span><span class="setting-copy"><strong>退出Google账号</strong><small>停止同步当前设备</small></span><b>↗</b></button>
+    <p class="settings-note">仅同步最高关卡和每关最高星数。体力、签到、分享奖励及设置仅保存在当前设备。</p>
+  </aside>
+  <aside id="googleSheet" class="sheet compact google-sheet" aria-label="使用Google账号保持进度">
+    <button class="sheet-close google-cancel">×</button><div class="google-mark">G</div><h2>保持游戏进度</h2>
+    <p>仅同步最高关卡和每关最高星数；体力与每日奖励不会上传。登录后将自动保留本机和云端较高的进度。</p>
+    <button id="googleSignInBtn" class="google-signin"><span class="google-g">G</span><span>使用Google账号继续</span></button>
+    <button class="google-later google-cancel">暂不登录</button>
+  </aside>
+  <aside id="lifeSheet" class="sheet compact life-sheet" aria-label="体力不足">
+    <button class="sheet-close" data-close>×</button><span class="sheet-kicker">DAILY ENERGY</span><div class="life-heart"><span class="energy-core large"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.2 2-8 11.2h5.3L9.8 22l8-11.4h-5.2Z"/></svg></span></div><h2>今日体力用完了</h2>
+    <p>每天自动恢复5点体力。观看一段模拟广告，可立即补充1点。</p>
+    <button id="watchAdBtn" class="secondary-btn"><span>▶</span> 观看广告 · +1体力</button>
+  </aside>
+  <aside id="lifeInfoSheet" class="sheet compact life-info-sheet" aria-label="每日体力说明">
+    <button class="sheet-close" data-close>×</button><span class="sheet-kicker">DAILY ENERGY</span><div class="life-heart"><span class="energy-core large"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.2 2-8 11.2h5.3L9.8 22l8-11.4h-5.2Z"/></svg></span></div><h2>每日体力</h2>
+    <p>每天恢复5点体力，每开始一局消耗1点。体力不足时可通过观看广告补充。</p><button class="secondary-btn" data-close>知道了</button>
+  </aside>
+  <aside id="energyAdSheet" class="sheet compact life-info-sheet" aria-label="增加体力">
+    <button class="sheet-close" data-close>×</button><span class="sheet-kicker">ENERGY BOOST</span><div class="life-heart"><span class="energy-core large"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.2 2-8 11.2h5.3L9.8 22l8-11.4h-5.2Z"/></svg></span></div><h2>补充1点体力</h2>
+    <p id="energyAdStatus">当前体力 4/5，观看一段模拟广告即可补充。</p><button id="watchEnergyAdBtn" class="secondary-btn">观看广告 · +1体力</button>
+  </aside>
+  <aside id="toolAdSheet" class="sheet compact tool-ad-sheet" aria-label="补充工具次数">
+    <button class="sheet-close" data-close>×</button><span class="sheet-kicker">BONUS TOOL</span><div class="ad-tool-icon">▶</div><h2 id="toolAdTitle">补充1次提示</h2>
+    <p>本局免费次数已用完，观看一段模拟广告即可继续使用。</p><button id="watchToolAdBtn" class="secondary-btn">观看广告 · +1次</button>
+  </aside>
+  <aside id="shareSheet" class="sheet compact share-sheet" aria-label="分享获得体力">
+    <button class="sheet-close" data-close>×</button><span class="sheet-kicker">SHARE & EARN</span><h2>分享给朋友</h2>
+    <small id="shareStatus">今日首次分享可领取2点体力</small>
+    <div class="share-apps" aria-label="常用应用"><button class="share-channel" data-channel="WhatsApp"><i class="app-whatsapp">W</i><span>WhatsApp</span></button><button class="share-channel" data-channel="Messenger"><i class="app-messenger">M</i><span>Messenger</span></button><button class="share-channel" data-channel="Zalo"><i class="app-zalo">Z</i><span>Zalo</span></button><button class="share-channel" data-channel="更多"><i class="app-more">•••</i><span>更多</span></button></div>
+    <div class="share-actions"><button id="copyLinkBtn" class="share-channel" data-channel="复制链接"><span><b>⧉</b><em>复制链接</em></span><strong>复制</strong></button></div>
+  </aside>
+  <aside id="checkinSheet" class="sheet compact checkin-sheet" aria-label="每周签到">
+    <button class="sheet-close" data-close>×</button><span class="sheet-kicker">WEEKLY CHECK-IN</span><h2>每周签到</h2><p>周一至周五奖励1点体力，周六、周日奖励2点。</p>
+    <div id="checkinWeek" class="checkin-week"></div><button id="claimCheckinBtn" class="secondary-btn">签到领取体力</button>
+  </aside>
+  <aside id="languageSheet" class="sheet compact language-sheet" aria-label="选择语言">
+    <button class="sheet-close" data-close>×</button><span class="sheet-kicker">LANGUAGE</span><h2>选择语言</h2><div id="languageList" class="language-list">
+      <button data-language="自动检测"><span>自动检测<small>跟随设备语言</small></span><b>✓</b></button><button data-language="英语"><span>英语</span><b>✓</b></button><button data-language="越南语"><span>越南语</span><b>✓</b></button><button data-language="泰国语"><span>泰国语</span><b>✓</b></button><button data-language="菲律宾语"><span>菲律宾语</span><b>✓</b></button><button data-language="印度语"><span>印度语</span><b>✓</b></button><button data-language="简体中文"><span>简体中文<small>正式环境删除</small></span><b>✓</b></button>
+    </div>
+  </aside>
+  <aside id="logoutConfirmSheet" class="sheet compact confirm-sheet" aria-label="确认退出Google账号">
+    <button class="sheet-close" data-close>×</button><span class="sheet-kicker">SIGN OUT</span><div class="confirm-cloud">☁</div><h2>退出Google账号？</h2>
+    <p>退出后将停止云同步，但本机已有的最高关卡和星级不会删除，云端存档也会保留。</p><button id="confirmGoogleLogoutBtn" class="danger-btn">确认退出</button><button class="google-later" data-close>取消</button>
+  </aside>
+  <aside id="aboutSheet" class="sheet compact about-sheet" aria-label="关于趣味麻将碰">
+    <button class="sheet-close" data-close>×</button><span class="sheet-kicker">ABOUT</span><h2>趣味麻将碰</h2><p>Fun Mahjong Pong</p><div class="about-version">v1.0.0</div>
+    <button class="legal-row"><span>用户协议</span><b>›</b></button><button class="legal-row"><span>隐私政策</span><b>›</b></button><small>协议与政策正文由开发团队在正式环境填写。</small>
+  </aside>
+  <aside id="profileSheet" class="sheet compact profile-sheet" aria-label="个人信息">
+    <button class="sheet-close" data-close>×</button><h2>个人信息</h2><div class="profile-summary"><div id="profileAvatarPreview" class="profile-avatar-preview"></div><label class="profile-name"><span>玩家名字</span><input id="playerNameInput" type="text" maxlength="15" autocomplete="off" placeholder="输入名字"><small><b id="nameCount">0</b>/15</small><i>✎</i></label></div><p id="profileLevel">最高第1关</p>
+    <div class="profile-section-title"><strong>选择头像</strong><small>每50关解锁一个新头像</small></div><div id="avatarGrid" class="avatar-grid"></div><button id="saveProfileBtn" class="secondary-btn">保存个人信息</button>
+  </aside>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+/* V46 — overlap player card on current-level top-right corner */
+.journey-step.current.step-left>button.journey-profile{left:calc(68% - 29px)!important;right:auto!important;top:0!important;transform:rotate(2deg)!important}.journey-step.current.step-right>button.journey-profile{left:auto!important;right:-7px!important;top:0!important;transform:rotate(2deg)!important}@media(max-height:700px){.journey-step.current.step-left>button.journey-profile{left:calc(68% - 29px)!important;top:-1px!important}.journey-step.current.step-right>button.journey-profile{top:-1px!important}}

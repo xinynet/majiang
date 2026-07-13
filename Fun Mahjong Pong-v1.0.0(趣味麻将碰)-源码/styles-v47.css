@@ -1,0 +1,2 @@
+/* V47 — stamina refill always uses plus icon */
+.life-badge.empty .energy-add{width:22px;height:22px;clip-path:polygon(50% 0,93% 24%,93% 76%,50% 100%,7% 76%,7% 24%);font-size:17px}
