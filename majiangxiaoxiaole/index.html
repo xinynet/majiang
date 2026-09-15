@@ -34,6 +34,8 @@
   <link rel="stylesheet" href="styles-v56.css">
   <link rel="stylesheet" href="styles-v57.css">
   <link rel="stylesheet" href="styles-v58.css">
+  <link rel="stylesheet" href="styles-v59.css">
+  <link rel="stylesheet" href="styles-v60.css">
   <title>趣味麻将碰 · Fun Mahjong Pong</title>
 </head>
 <body>
@@ -75,26 +77,58 @@
     </section>
 
     <section id="game" class="screen game" aria-label="游戏页">
-      <header class="game-header">
-        <div class="life-badge game-life" aria-label="剩余体力"><button class="energy-summary" data-open="lifeInfoSheet" aria-label="查看剩余体力"><span class="energy-core"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.2 2-8 11.2h5.3L9.8 22l8-11.4h-5.2Z"/></svg></span><strong class="lifeCount">5</strong></button><button class="energy-add" aria-label="观看视频增加体力">+</button></div>
-        <div class="level-title"><strong id="levelName">第 50 关</strong></div>
-        <button class="circle-btn settings-btn" data-open="pauseSheet" aria-label="游戏设置">⚙</button>
+      <header class="g-top">
+        <div class="g-top-left">
+          <button id="pauseBtn" class="g-pause" aria-label="暂停"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7.5" y="5" width="3.6" height="14" rx="1.8"/><rect x="13.4" y="5" width="3.6" height="14" rx="1.8"/></svg></button>
+          <div class="g-score" aria-label="本局得分"><span class="g-star"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.6 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9Z"/></svg></span><b id="scoreCount">0</b></div>
+        </div>
+        <div class="g-top-tools">
+          <button id="gRulesBtn" class="g-round" aria-label="玩法说明"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="7" width="19" height="10" rx="5"/><path d="M7 12h3M8.5 10.5v3"/><circle cx="15.6" cy="11.2" r="1.05"/><circle cx="17.8" cy="13.4" r="1.05"/></svg></button>
+          <button id="gMoreBtn" class="g-round" aria-label="游戏设置"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/></svg></button>
+          <button id="gQuitBtn" class="g-round" aria-label="退出本局"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 7.5 9 9m0-9-9 9"/></svg></button>
+        </div>
       </header>
-      <div class="status-row">
-        <div class="total-stat"><span class="status-label">总数</span><strong id="totalCount">60</strong></div>
-        <div class="type-stat"><span class="status-label">种类</span><strong id="remainingTypes">30</strong></div>
-        <div class="remaining-stat"><span class="status-label">剩余</span><strong id="remainingCount">60</strong></div>
-        <span id="timer" class="hidden" aria-hidden="true">00:00</span>
+      <div class="g-timer-row">
+        <div class="g-timer"><span class="g-timer-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3.2 2"/></svg></span><b id="timer">10:00</b></div>
       </div>
       <main id="boardWrap" class="board-wrap">
-        <div class="ambient-ring ring-one"></div><div class="ambient-ring ring-two"></div>
         <div id="board" class="board" role="grid" aria-label="麻将棋盘"></div>
+        <div class="shuffle-hands" aria-hidden="true">
+          <div class="shuffle-hand shuffle-hand-left"><img src="assets/hands/right-hand-long.png" alt="" draggable="false"></div>
+          <div class="shuffle-hand shuffle-hand-right"><img src="assets/hands/right-hand-long.png" alt="" draggable="false"></div>
+        </div>
         <div id="toast" class="toast" role="status"></div>
-        <div id="coach" class="coach hidden"><span></span><p id="coachText">选择两张相同的牌</p></div>
+        <div id="coach" class="coach hidden"><span></span><p id="coachText">点击麻将，放进下方卡槽</p></div>
       </main>
-      <nav class="tool-dock" aria-label="游戏工具">
-        <button id="hintBtn" class="tool-btn featured"><span class="tool-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10.5 20.5c-2.2-1.7-3.5-4.2-3.5-7.1A9 9 0 0 1 16 4a9 9 0 0 1 9 9.4c0 2.9-1.4 5.5-3.6 7.1-1.2.9-1.8 1.8-2 3.1h-6.9c-.2-1.3-.8-2.2-2-3.1Z"/><path d="M12.7 26.5h6.6M14.2 29h3.6"/></svg><b id="hintCount" class="tool-count">2</b></span><span>提示</span></button>
-        <button id="shuffleBtn" class="tool-btn"><span class="tool-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 9h4.2c6.5 0 5.4 14 12 14H26"/><path d="m22 19 4 4-4 4M6 23h4.2c2.2 0 3.6-1.7 4.8-4M18 11c1.1-1.3 2.3-2 4.2-2H26"/><path d="m22 5 4 4-4 4"/></svg><b id="shuffleCount" class="tool-count">2</b></span><span>洗牌</span></button>
+      <div class="g-status">
+        <span class="g-stat">关卡<b id="levelName">1</b></span>
+        <span class="g-stat">种类<b id="remainingTypes">0</b></span>
+        <span class="g-stat">总数<b id="totalCount">0</b></span>
+        <span class="g-stat g-stat-right">剩余数量<b id="remainingCount">0</b></span>
+      </div>
+      <div id="slotTray" class="g-tray" aria-label="卡槽"></div>
+      <div class="g-combo"><i id="comboFill"></i><b id="comboText">x1</b></div>
+      <nav class="g-dock" aria-label="游戏道具">
+        <div class="g-prop" data-tool="clear">
+          <button class="g-prop-main" aria-label="使用消除道具"><span class="g-prop-icon icon-clear"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10.5 20.5c-2.2-1.7-3.5-4.2-3.5-7.1A9 9 0 0 1 16 4a9 9 0 0 1 9 9.4c0 2.9-1.4 5.5-3.6 7.1-1.2.9-1.8 1.8-2 3.1h-6.9c-.2-1.3-.8-2.2-2-3.1Z"/><path d="M12.7 26.5h6.6M14.2 29h3.6"/></svg></span><span class="g-prop-name">消除</span></button>
+          <button class="g-prop-add" aria-label="补充消除道具">+</button>
+          <b class="g-prop-count">0</b>
+        </div>
+        <div class="g-prop" data-tool="shuffle">
+          <button class="g-prop-main" aria-label="使用洗牌道具"><span class="g-prop-icon icon-shuffle"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 9h4.2c6.5 0 5.4 14 12 14H26"/><path d="m22 19 4 4-4 4M6 23h4.2c2.2 0 3.6-1.7 4.8-4M18 11c1.1-1.3 2.3-2 4.2-2H26"/><path d="m22 5 4 4-4 4"/></svg></span><span class="g-prop-name">洗牌</span></button>
+          <button class="g-prop-add" aria-label="补充洗牌道具">+</button>
+          <b class="g-prop-count">0</b>
+        </div>
+        <div class="g-prop" data-tool="undo">
+          <button class="g-prop-main" aria-label="使用翻牌道具"><span class="g-prop-icon icon-undo"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 21c0-6.6 5.4-12 12-12h5"/><path d="m19 4 5 5-5 5"/><path d="M7 21v6"/></svg></span><span class="g-prop-name">翻牌</span></button>
+          <button class="g-prop-add" aria-label="补充翻牌道具">+</button>
+          <b class="g-prop-count">0</b>
+        </div>
+        <div class="g-prop" data-tool="magnet">
+          <button class="g-prop-main" aria-label="使用磁铁道具"><span class="g-prop-icon icon-magnet"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 26V15a10 10 0 0 1 20 0v11"/><path d="M6 26h6V15a4 4 0 0 1 8 0v11h6"/><path d="M6 21.5h6M20 21.5h6"/></svg></span><span class="g-prop-name">磁铁</span></button>
+          <button class="g-prop-add" aria-label="补充磁铁道具">+</button>
+          <b class="g-prop-count">0</b>
+        </div>
       </nav>
     </section>
 
@@ -127,6 +161,7 @@
     <button class="sheet-close" data-close>×</button><h2>游戏设置</h2>
     <label class="toggle-row"><span class="game-setting-icon game-sound-icon">◖</span><span class="game-setting-copy"><strong>音效</strong><small>配对与翻牌声音</small></span><input id="gameSoundToggle" type="checkbox" checked><i></i></label>
     <label class="toggle-row"><span class="game-setting-icon game-vibration-icon">▰</span><span class="game-setting-copy"><strong>振动</strong><small>点击与成功配对震动</small></span><input id="gameHapticToggle" type="checkbox" checked><i></i></label>
+    <label class="toggle-row"><span class="game-setting-icon">↻</span><span class="game-setting-copy"><strong>动画</strong><small>双手洗牌与麻将下落</small></span><input id="gameMotionToggle" type="checkbox" checked><i></i></label>
     <button class="menu-row" id="restartBtn"><span class="game-setting-icon restart-icon">↻</span><span class="game-setting-copy"><strong>重新开始</strong><small>重新摆放本局麻将</small></span><b>↻</b></button>
     <button class="menu-row" id="pauseHomeBtn"><span class="game-setting-icon home-icon">⌂</span><span class="game-setting-copy"><strong>返回首页</strong><small>保存当前闯关进度</small></span><b>⌂</b></button>
   </aside>
@@ -134,6 +169,7 @@
     <button class="sheet-close" data-close>×</button><h2>设置</h2>
     <label class="toggle-row"><span class="setting-icon sound-icon">◖</span><span class="setting-copy"><strong>音效</strong><small>牌面轻触与配对反馈</small></span><input id="soundToggle" type="checkbox" checked><i></i></label>
     <label class="toggle-row"><span class="setting-icon vibration-icon">▰</span><span class="setting-copy"><strong>振动</strong><small>支持设备上的轻微振动</small></span><input id="hapticToggle" type="checkbox" checked><i></i></label>
+    <label class="toggle-row"><span class="setting-icon">↻</span><span class="setting-copy"><strong>动画</strong><small>双手洗牌与麻将下落</small></span><input id="motionToggle" type="checkbox" checked><i></i></label>
     <button id="languageBtn" class="cloud-save-row"><span class="setting-icon language-icon">◎</span><span class="setting-copy"><strong>语言</strong><small id="languageStatus">自动检测</small></span><b>›</b></button>
     <button id="cloudSaveBtn" class="cloud-save-row"><span class="setting-icon cloud-icon">☁</span><span class="setting-copy"><strong>保持进度</strong><small id="cloudSaveStatus">仅保存在此设备</small></span><b>›</b></button>
     <button id="aboutBtn" class="cloud-save-row"><span class="setting-icon about-icon">i</span><span class="setting-copy"><strong>关于</strong><small>版本与法律信息</small></span><b>›</b></button>
@@ -163,6 +199,12 @@
     <button class="sheet-close" data-close>×</button><span class="sheet-kicker">BONUS TOOL</span><div class="ad-tool-icon">▶</div><h2 id="toolAdTitle">补充1次提示</h2>
     <p>本局免费次数已用完，观看一段模拟广告即可继续使用。</p><button id="watchToolAdBtn" class="secondary-btn">观看广告 · +1次</button>
   </aside>
+  <aside id="failSheet" class="sheet compact fail-sheet" aria-label="本局结束">
+    <button class="sheet-close" data-close>&#215;</button><span class="sheet-kicker">GAME OVER</span><div class="fail-mark">!</div><h2 id="failTitle">卡槽已满</h2>
+    <p id="failDesc">卡槽放满 7 张仍没有凑齐三张相同的麻将。</p>
+    <button id="failRetryBtn" class="secondary-btn">再玩一次 · 消耗1点体力</button>
+    <button id="failHomeBtn" class="google-later">返回主页</button>
+  </aside>
   <aside id="shareSheet" class="sheet compact share-sheet" aria-label="分享获得体力">
     <button class="sheet-close" data-close>×</button><span class="sheet-kicker">SHARE & EARN</span><h2>分享给朋友</h2>
     <small id="shareStatus">今日首次分享可领取2点体力</small>
@@ -191,6 +233,8 @@
     <div class="profile-section-title"><strong>选择头像</strong><small>每50关解锁一个新头像</small></div><div id="avatarGrid" class="avatar-grid"></div><button id="saveProfileBtn" class="secondary-btn">保存个人信息</button>
   </aside>
 
+  <script src="assets/tile-poses/poses.js"></script>
+  <script src="tile-motion.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 /* V58 — scattered 3D mahjong pile (reference-style messy stack) */
-.tile:not(.deal-in):not(.match-clone){transform:translate(var(--rest-x,0),var(--rest-y,0)) rotate(var(--rest-rot,0deg))!important}
-.tile:not(.deal-in):not(.match-clone).layer-1{transform:translate(var(--rest-x,0),var(--rest-y,0)) rotate(var(--rest-rot,0deg))!important}
-.tile:not(.deal-in):not(.match-clone).layer-2{transform:translate(var(--rest-x,0),var(--rest-y,0)) rotate(var(--rest-rot,0deg))!important}
+
+
+
 .tile{transform-origin:50% 62%;transition:left .25s,top .25s,transform .28s cubic-bezier(.2,.8,.2,1),opacity .2s}
 .tile.layer-1{z-index:3}.tile.layer-2{z-index:4}
 .tile.selected:not(.deal-in):not(.match-clone){z-index:99!important;transform:translate(var(--rest-x,0),calc(var(--rest-y,0) - 14px)) rotate(var(--rest-rot,0deg)) scale(1.07)!important}

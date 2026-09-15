@@ -1,0 +1,182 @@
+/* v59 — 三消卡槽玩法界面 */
+#game.game{
+  position:absolute;flex-direction:column;
+  background:linear-gradient(180deg,#bfe59a 0,#a9db8b 96px,#7ec08d 97px,#5e9e7d 210px,#55957a 100%)!important;
+}
+#game.game:before{
+  content:"";position:absolute;left:0;right:0;top:0;height:150px;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 60px 26px at 12% 26%,rgba(255,255,255,.3),transparent 70%),
+    radial-gradient(ellipse 44px 20px at 84% 16%,rgba(255,255,255,.26),transparent 70%),
+    radial-gradient(ellipse 70px 30px at 62% 40%,rgba(120,195,124,.34),transparent 72%),
+    radial-gradient(ellipse 50px 22px at 30% 52%,rgba(120,195,124,.3),transparent 72%);
+}
+#game.game:after{
+  content:"";position:absolute;left:0;right:0;top:96px;height:14px;z-index:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.5) 0 7px,rgba(168,214,160,.5) 7px 14px);
+  box-shadow:0 2px 6px rgba(36,74,52,.18);
+}
+#game .g-top,#game .g-timer-row,#game .board-wrap,#game .g-status,#game .g-tray,#game .g-combo,#game .g-dock{position:relative;z-index:2}
+
+/* ---- 顶部栏 ---- */
+#game .g-top{height:auto;padding:max(10px,env(safe-area-inset-top)) 14px 0;display:flex;align-items:flex-start;justify-content:space-between;background:none;border:0}
+#game .g-top-left{display:flex;flex-direction:column;align-items:flex-start;gap:9px}
+#game .g-pause{width:40px;height:40px;padding:0;border:0;border-radius:13px;display:grid;place-items:center;background:rgba(62,110,80,.42);box-shadow:inset 0 1px rgba(255,255,255,.3)}
+#game .g-pause svg{width:19px;height:19px;fill:#fff;stroke:none}
+#game .g-score{position:relative;display:flex;align-items:center;padding-left:4px}
+#game .g-star{width:26px;height:26px;display:grid;place-items:center;filter:drop-shadow(0 2px 3px rgba(60,44,10,.3))}
+#game .g-star svg{width:26px;height:26px;fill:#ffd33f;stroke:#e0a013;stroke-width:1.4}
+#game .g-score b{min-width:30px;margin-left:-9px;padding:2px 8px 2px 13px;border-radius:999px;color:#fff;background:rgba(48,92,66,.62);font-size:11px;line-height:15px;text-align:center}
+#game .g-top-tools{display:flex;align-items:center;gap:6px;padding:4px;border-radius:999px;background:rgba(62,110,80,.34)}
+#game .g-round{width:33px;height:33px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.22)}
+#game .g-round svg{width:19px;height:19px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#game #gRulesBtn svg circle{fill:#fff;stroke:none}
+#game #gMoreBtn svg circle{fill:#fff;stroke:none}
+#game .g-round:active{transform:scale(.93)}
+
+/* ---- 倒计时 ---- */
+#game .g-timer-row{display:flex;justify-content:flex-end;padding:8px 16px 4px}
+#game .g-timer{display:flex;align-items:center;gap:6px;padding:3px 13px 3px 3px;border-radius:999px;background:rgba(41,84,60,.5);box-shadow:inset 0 1px rgba(255,255,255,.16)}
+#game .g-timer-icon{width:23px;height:23px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#59b6f2,#2a7fd0);box-shadow:inset 0 1px rgba(255,255,255,.5)}
+#game .g-timer-icon svg{width:14px;height:14px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round}
+#game .g-timer b{color:#fff;font-size:15px;letter-spacing:.5px;font-variant-numeric:tabular-nums}
+#game .g-timer.urgent{background:rgba(150,44,38,.62)}
+#game .g-timer.urgent b{color:#ffe3e0}
+#game .g-timer.urgent .g-timer-icon{background:linear-gradient(145deg,#f57c6d,#c93a2c)}
+
+/* ---- 牌桌 ---- */
+#game .board-wrap{
+  flex:1;min-height:0;margin:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;box-shadow:none!important;overflow:visible
+}
+#game .board-wrap:before,#game .board-wrap:after{display:none!important}
+#game .board{position:absolute;inset:4px 10px 6px;overflow:visible;perspective:1100px;perspective-origin:50% 42%;touch-action:manipulation}
+
+#game .tile{
+  position:absolute;padding:0;border:0;overflow:visible;display:block;aspect-ratio:auto!important;
+  /* 牌体填白：圆角缺口、各面接缝都有实体挡着，绿色牌桌透不出来 */
+  background:#fbfbfb!important;
+  border-radius:calc(var(--tw,50px) * .035);
+  box-shadow:none!important;
+  transform-style:preserve-3d;transform-origin:50% 62%;
+  transition:left .3s ease,top .3s ease,transform .3s ease,opacity .18s;
+}
+#game .tile:before,#game .tile:after{display:none!important}
+
+/* 牌面：素材本身就是一整张麻将，裁掉外框只留图案，避免「牌中牌」 */
+#game .tile-face{
+  position:absolute;inset:0;overflow:hidden;backface-visibility:hidden;
+  border-radius:calc(var(--tw,50px) * .035);
+  background:linear-gradient(158deg,#ffffff 0%,#fdfdfd 64%,#f8f8f8 100%);
+  /* 圆楞的反光：沿左上圆角一圈纯白亮弧，右下收一点极淡的中性暗面 */
+  box-shadow:
+    inset 2.5px 2.5px 0 -0.5px rgba(255,255,255,1),
+    inset 0 4px 6px -2px rgba(255,255,255,1),
+    inset 3px 0 5px -3px rgba(255,255,255,1),
+    inset -1.5px -2px 4px -1px rgba(70,70,70,.13),
+    0 4px 7px rgba(42,42,42,.26);
+  transform:translateZ(calc(var(--td,7px) / 2));
+}
+#game .tile.layer-1 .tile-face{box-shadow:inset 2.5px 2.5px 0 -0.5px rgba(255,255,255,1),inset 0 4px 6px -2px rgba(255,255,255,1),inset 3px 0 5px -3px rgba(255,255,255,1),inset -1.5px -2px 4px -1px rgba(70,70,70,.13),0 6px 9px rgba(38,38,38,.3)}
+#game .tile.layer-2 .tile-face{box-shadow:inset 2.5px 2.5px 0 -0.5px rgba(255,255,255,1),inset 0 4px 6px -2px rgba(255,255,255,1),inset 3px 0 5px -3px rgba(255,255,255,1),inset -1.5px -2px 4px -1px rgba(70,70,70,.13),0 8px 12px rgba(34,34,34,.34)}
+#game .tile.picked{pointer-events:none;opacity:0}
+
+/* 每张牌都是真正的六面盒子：正面雪白，背面整片红，侧面从贴着正面的白渐变到靠背面的红 */
+#game .tile-rim{position:absolute;display:block;backface-visibility:hidden;border-radius:calc(var(--tw,50px) * .035)}
+#game .rim-l,#game .rim-r{left:50%;top:0;height:100%;width:var(--td,7px);margin-left:calc(var(--td,7px) / -2)}
+/* 楞只有白，最靠近背面的一窄条才是红 —— 不掺任何灰或米色 */
+#game .rim-l{transform:translateX(calc(var(--tw,50px) / -2)) rotateY(-90deg);background:linear-gradient(to right,#ae291c 0%,#d63d2c 13%,#fbfbfb 19%,#ffffff 70%,#fafafa 100%)}
+#game .rim-r{transform:translateX(calc(var(--tw,50px) / 2)) rotateY(90deg);background:linear-gradient(to right,#fafafa 0%,#ffffff 30%,#fbfbfb 81%,#d63d2c 87%,#ae291c 100%)}
+#game .rim-t,#game .rim-b{left:0;width:100%;top:50%;height:var(--td,7px);margin-top:calc(var(--td,7px) / -2)}
+#game .rim-t{transform:translateY(calc(var(--th,64px) / -2)) rotateX(90deg);background:linear-gradient(to bottom,#ae291c 0%,#d63d2c 22%,#ffffff 30%,#ffffff 72%,#fcfcfc 100%)}
+#game .rim-b{transform:translateY(calc(var(--th,64px) / 2)) rotateX(-90deg);background:linear-gradient(to bottom,#fcfcfc 0%,#ffffff 30%,#fbfbfb 68%,#d63d2c 78%,#ae291c 100%)}
+
+/* 倚靠的牌被抽走后：慢慢展开、带一点回弹地躺平 */
+#game .tile.falling{transition:transform .9s cubic-bezier(.22,.82,.3,1.04),left .9s cubic-bezier(.25,.7,.35,1),top .9s cubic-bezier(.25,.7,.35,1)}
+/* 下层被抽走后上层受重力下滑 */
+#game .tile.dropping{transition:transform .46s cubic-bezier(.4,.05,.5,1),left .46s cubic-bezier(.4,.05,.5,1),top .46s cubic-bezier(.36,.12,.3,1.12)}
+
+#game .tile-reference-art,#game .g-slot .tile-reference-art{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:fill;filter:brightness(1.02) saturate(1.03);border-radius:inherit;
+}
+#game .tile-art{position:absolute;inset:7%;width:86%;height:86%}
+#game .tile-art text{text-anchor:middle;font-family:"Kaiti SC","STKaiti","Songti SC","SimSun",serif;font-weight:700;paint-order:stroke fill}
+#game .tile-art .wan-num{font-size:46px;fill:#141414}
+#game .tile-art .wan-char{font-size:42px;fill:#c1281c}
+#game .tile-art .wan-sh{fill:rgba(56,34,26,.46)}
+#game .tile-art .wan-hi{fill:#ffffff}
+
+/* ---- 数据行 ---- */
+#game .g-status{height:auto;padding:6px 14px 8px;display:flex;align-items:center;gap:9px;background:none}
+#game .g-stat{display:inline-flex;align-items:center;gap:4px;color:#e8f6e6;font-size:10px;white-space:nowrap;text-shadow:0 1px 2px rgba(23,56,39,.4)}
+#game .g-stat b{padding:1px 7px;border-radius:7px;color:#1d4e37;background:#b8e8a8;font-size:11px;box-shadow:inset 0 -1px rgba(60,120,80,.2);font-variant-numeric:tabular-nums}
+#game .g-stat-right{margin-left:auto}
+
+/* ---- 卡槽 ---- */
+#game .g-tray{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:5px;
+  margin:0 12px;padding:8px;border-radius:15px;
+  background:rgba(30,66,48,.5);box-shadow:inset 0 2px 7px rgba(12,34,23,.5)
+}
+#game .g-slot{
+  position:relative;overflow:hidden;aspect-ratio:1/1.3636;border-radius:8px;
+  background:rgba(22,52,38,.72);box-shadow:inset 0 2px 5px rgba(8,26,18,.6)
+}
+#game .g-slot.filled{background:linear-gradient(150deg,#ffffff,#eceae2);box-shadow:0 2px 0 #c9c6bb,0 4px 7px rgba(12,34,23,.35)}
+#game .g-slot{overflow:hidden}
+#game .g-slot svg.tile-art{position:absolute;inset:7%;width:86%;height:86%}
+#game .g-slot.pop{animation:v59Pop .26s ease-out}
+@keyframes v59Pop{0%{transform:scale(.55);opacity:.4}70%{transform:scale(1.1)}100%{transform:scale(1)}}
+#game .g-slot.clearing{animation:v59Clear .3s ease-in forwards}
+@keyframes v59Clear{to{transform:scale(.3) translateY(-18px);opacity:0}}
+#game .g-tray.danger{background:rgba(120,38,32,.55);box-shadow:inset 0 2px 7px rgba(60,12,10,.5),0 0 0 2px rgba(233,92,78,.5)}
+
+/* ---- 连击条 ---- */
+#game .g-combo{position:relative;height:19px;margin:8px 34px 0;border-radius:999px;overflow:hidden;background:rgba(28,62,45,.55);box-shadow:inset 0 2px 5px rgba(10,30,20,.45)}
+#game .g-combo i{position:absolute;inset:0;width:100%;transform-origin:left;border-radius:999px;background:linear-gradient(90deg,#8fd85f,#4fb37a);transition:width .25s linear}
+#game .g-combo b{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:12px;letter-spacing:.5px;text-shadow:0 1px 2px rgba(20,50,34,.55)}
+
+/* ---- 道具栏 ---- */
+#game .g-dock{
+  height:auto;margin-top:9px;padding:9px 8px max(8px,env(safe-area-inset-bottom));
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;align-items:start;
+  border-radius:19px 19px 0 0;background:rgba(27,61,44,.62);box-shadow:inset 0 1px rgba(255,255,255,.1)
+}
+#game .g-prop{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px}
+#game .g-prop-main{
+  width:100%;min-height:38px;padding:4px 2px;border:0;border-radius:13px;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  background:rgba(255,255,255,.1);box-shadow:inset 0 1px rgba(255,255,255,.14)
+}
+#game .g-prop-main:active{transform:translateY(2px)}
+#game .g-prop-icon{width:26px;height:26px;flex:0 0 26px;border-radius:9px;display:grid;place-items:center;box-shadow:inset 0 1px rgba(255,255,255,.4),0 2px 4px rgba(12,34,22,.3)}
+#game .g-prop-icon svg{width:17px;height:17px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+#game .icon-clear{background:linear-gradient(145deg,#ffd34e,#f0a316)}
+#game .icon-shuffle{background:linear-gradient(145deg,#ff8a6b,#e0492f)}
+#game .icon-undo{background:linear-gradient(145deg,#ffb45c,#ef7c1c)}
+#game .icon-magnet{background:linear-gradient(145deg,#ff7d84,#d92f45)}
+#game .g-prop-name{color:#fff;font-size:11px;letter-spacing:.5px;white-space:nowrap}
+#game .g-prop-count{color:#fff;font-size:12px;line-height:16px;font-variant-numeric:tabular-nums}
+#game .g-prop-add{
+  position:absolute;right:-1px;top:-5px;z-index:3;width:17px;height:17px;padding:0;border:1.5px solid #fff;border-radius:50%;
+  display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,#6fd04e,#37a03f);
+  box-shadow:0 2px 4px rgba(12,34,22,.35);font-size:12px;line-height:1
+}
+#game .g-prop-add:active{transform:scale(.88)}
+#game .g-prop.empty .g-prop-count{color:#a9c6b4}
+
+/* ---- 提示条 ---- */
+#game .toast{bottom:14px;background:rgba(18,46,33,.92);color:#eafbe9}
+#game .coach{top:10px;border:0;color:#1d4e37;background:#e6f8cf;box-shadow:0 6px 16px rgba(18,46,33,.28)}
+
+/* ---- 结束弹窗 ---- */
+.fail-sheet .fail-mark{width:60px;height:60px;margin:0 auto 12px;border-radius:50%;display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,#ff8a6b,#d9432c);box-shadow:0 8px 18px rgba(170,54,34,.28);font-size:30px;font-weight:700}
+
+@media(max-height:720px){
+  #game .g-dock{padding-top:6px}
+  #game .g-prop-main{min-height:34px}
+  #game .g-prop-icon{width:23px;height:23px;flex-basis:23px}
+  #game .g-combo{height:16px;margin-top:6px}
+  #game .g-tray{padding:6px;gap:4px}
+}

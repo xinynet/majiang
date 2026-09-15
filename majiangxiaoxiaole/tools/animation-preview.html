@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>麻将动画检查</title>
+<style>body{margin:0;padding:16px;background:#163c34;color:#fff;font:14px system-ui;text-align:center}nav{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}button{padding:10px 16px;border:0;border-radius:8px;background:#e6f2d5;cursor:pointer}iframe{width:430px;max-width:100%;height:932px;border:0;border-radius:12px;background:#398f77}</style>
+<nav><button data-mode="play">播放双手洗牌</button><button data-mode="freeze">洗牌中间帧</button><button data-mode="board">查看牌面</button><button data-mode="fall">抽掉倚靠牌</button></nav>
+<iframe title="游戏动画预览"></iframe>
+<script>
+const frame=document.querySelector('iframe');
+const harness=`<script>
+function inspectAnimation(mode){
+  state.motion=true;
+  if(mode==='play'||mode==='freeze'){
+    buildLevel(1);
+    if(mode==='freeze'){
+      clearTimeout(state.dealTimer);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>document.getAnimations().forEach(a=>{a.pause();a.currentTime=1100})));
+    }
+  }else{
+    clearTimeout(state.dealTimer);state.dealing=false;state.animating=false;render();
+    if(mode==='fall'){
+      const raised=state.tiles.find(t=>t.stand&&!t.removed&&!t.inTray);
+      if(raised)pickTile(raised.leanOn);
+    }
+  }
+}
+window.addEventListener('message',e=>{if(e.source===parent&&e.data.animationPreview)inspectAnimation(e.data.animationPreview)});
+window.addEventListener('load',()=>{closeSheets(false);inspectAnimation('freeze');setTimeout(()=>closeSheets(false),700)});
+<\/script>`;
+fetch('../index.html').then(r=>r.text()).then(html=>{
+  frame.srcdoc=html.replace('<head>','<head><base href="../">').replace('</body>',harness+'</body>');
+});
+document.querySelectorAll('button').forEach(b=>b.onclick=()=>frame.contentWindow.postMessage({animationPreview:b.dataset.mode},location.origin));
+</script></html>

@@ -1,0 +1,49 @@
+/* Geometry, reflections and the red back seam are baked into one RGBA atlas. */
+#game .board{perspective:none}
+#game .tile,#game .tile.standing,#game .tile.settling{
+  background:transparent!important;box-shadow:none!important;border:0;
+  transform-style:flat;transition:opacity .18s;isolation:isolate;
+}
+#game .baked-body{position:absolute;inset:0;pointer-events:none;isolation:isolate;
+  filter:drop-shadow(0 var(--contact-shadow,2px) 1.2px #193e333b)}
+#game .baked-shell{position:absolute;left:-17.5%;top:-17.5%;width:135%;height:135%;
+  background-image:url('assets/tile-poses/shells.png');background-size:600% 500%;background-repeat:no-repeat}
+#game .baked-art{position:absolute;left:0;top:0;width:100%;height:100%;
+  transform-origin:0 0;mix-blend-mode:multiply;overflow:hidden;border-radius:3%;}
+#game .baked-art .tile-reference-art{filter:none;border-radius:0;inset:5%;width:90%;height:90%;
+  mask-image:linear-gradient(to right,transparent,#000 12%,#000 88%,transparent),linear-gradient(to bottom,transparent,#000 12%,#000 88%,transparent);
+  mask-composite:intersect}
+#game .baked-art .tile-art{inset:5%;width:90%;height:90%;filter:none;transform:none}
+#game .baked-art .tile-art text{font-family:KaiTi,STKaiti,'Kaiti SC',SimSun,serif;font-weight:900}
+#game .tile:focus-visible{outline:2px solid #ffe58b;outline-offset:5px}
+#game .tile.settling{will-change:transform,left,top}
+#game .baked-shell-next{opacity:0}
+/* Both hands sweep across the loose tiles twice, then withdraw before play. */
+#game .shuffle-hands{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1500;display:none}
+#game .is-dealing .shuffle-hands{display:block}
+#game .shuffle-hand{position:absolute;bottom:-8%;width:44%;max-width:240px;aspect-ratio:2/3;transform-origin:50% 90%;opacity:0;
+  filter:drop-shadow(0 8px 5px #163d3540);animation:shuffleHand 3.4s ease-in-out both}
+#game .shuffle-hand img{position:absolute;top:0;left:0;display:block;width:100%;height:auto}
+#game .shuffle-hand-left{left:-2%;--hand-side:-1}
+#game .shuffle-hand-left img{transform:scaleX(-1)}
+#game .shuffle-hand-right{right:-2%;--hand-side:1}
+@keyframes shuffleHand{
+  0%{opacity:0;transform:translate(0,100%) rotate(calc(var(--hand-side)*12deg))}
+  12%{opacity:1;transform:translate(calc(var(--hand-side)*-3%),-18%) rotate(calc(var(--hand-side)*-2deg))}
+  30%{opacity:1;transform:translate(calc(var(--hand-side)*-6%),-60%) rotate(calc(var(--hand-side)*-4deg))}
+  48%{opacity:1;transform:translate(calc(var(--hand-side)*8%),-22%) rotate(calc(var(--hand-side)*8deg))}
+  67%{opacity:1;transform:translate(calc(var(--hand-side)*-5%),-55%) rotate(calc(var(--hand-side)*-3deg))}
+  82%{opacity:1;transform:translate(calc(var(--hand-side)*4%),-5%) rotate(calc(var(--hand-side)*5deg))}
+  100%{opacity:0;transform:translate(calc(var(--hand-side)*12%),115%) rotate(calc(var(--hand-side)*12deg))}
+}
+#game .tile.deal-in{animation:handWashTiles 3.4s ease-in-out both!important;filter:none!important}
+@keyframes handWashTiles{
+  0%{opacity:0;transform:translate(calc(var(--rest-x) + var(--deal-x)*.35),calc(var(--rest-y) + var(--deal-y)*.3)) rotate(calc(var(--rest-rot) + var(--wash-spin))) scale(.94)}
+  12%{opacity:1}
+  30%{transform:translate(calc(var(--rest-x) + var(--wash-x)),calc(var(--rest-y) + var(--wash-y))) rotate(calc(var(--rest-rot) + var(--wash-spin)))}
+  48%{transform:translate(calc(var(--rest-x) - var(--wash-x)*.7),calc(var(--rest-y) - var(--wash-y)*.6)) rotate(calc(var(--rest-rot) - var(--wash-spin)*.6))}
+  67%{transform:translate(calc(var(--rest-x) + var(--wash-x)*.65),calc(var(--rest-y) + var(--wash-y)*.6)) rotate(calc(var(--rest-rot) + var(--wash-spin)*.7))}
+  86%,100%{opacity:1;transform:translate(var(--rest-x),var(--rest-y)) rotate(var(--rest-rot))}
+}
+#game[data-motion="off"] .tile,#game[data-motion="off"] .tile.deal-in{animation:none!important}
+#game[data-motion="off"] .shuffle-hands{display:none!important}

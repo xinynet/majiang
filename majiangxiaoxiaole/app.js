@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const SYMBOLS=['一筒','二筒','三筒','四筒','五筒','六筒','七筒','八筒','九筒','一索','二索','三索','四索','五索','六索','七索','八索','九索','熊猫','狐狸','猫咪','小狗','狮子','老虎','兔子','猴子','苹果','橙子','柠檬','西瓜','葡萄','草莓','樱桃','桃子'];
+const SYMBOLS=['一筒','二筒','三筒','四筒','五筒','六筒','七筒','八筒','九筒','一索','二索','三索','四索','五索','六索','七索','八索','九索','一萬','二萬','三萬','四萬','五萬','六萬','七萬','八萬','九萬','熊猫','狐狸','猫咪','小狗','狮子','老虎','兔子','猴子','苹果','橙子','柠檬','西瓜','葡萄','草莓','樱桃','桃子'];
 const PICTURE_TILES={熊猫:'panda',狐狸:'fox',猫咪:'cat',小狗:'dog',狮子:'lion',老虎:'tiger',兔子:'rabbit',猴子:'monkey',苹果:'apple',橙子:'orange',柠檬:'lemon',西瓜:'watermelon',葡萄:'grapes',草莓:'strawberry',樱桃:'cherry',桃子:'peach'};
 const PICTURE_SVG={
   panda:'<g stroke="#183f38" stroke-linejoin="round"><path d="M18 67c3-19 15-31 32-32 18-2 32 9 35 27-5 12-17 19-34 19-16 0-27-5-33-14Z" fill="#eee7d8"/><path d="M30 39c-9-7-18-2-18 8 0 8 6 13 14 12m47-20c9-7 18-2 18 8 0 8-6 13-14 12M25 68l-5 17m23-6-2 9m33-18 6 15M37 39c-8 6-11 14-8 25 7 7 14 7 21 1-5-10-4-19 2-28m10 2c8 6 11 14 8 25-7 7-14 7-21 1" fill="#183f38"/><path d="M28 70c15 6 31 6 47-1" fill="none" stroke="#a07c4c"/></g>',
@@ -19,7 +19,7 @@ const PICTURE_SVG={
   cherry:'<g stroke="#31543d" stroke-width="3" stroke-linejoin="round"><path d="M34 61c5-27 13-39 29-48M67 62c-1-22-5-35-13-45" fill="none"/><path d="M56 18c9-12 21-8 24 2-10 5-18 4-24-2Z" fill="#438b50"/><circle cx="30" cy="67" r="17" fill="#b72e3a"/><circle cx="68" cy="68" r="17" fill="#c73b45"/></g>',
   peach:'<g stroke="#6f4736" stroke-width="3" stroke-linejoin="round"><path d="M52 25c4-12 13-18 23-17-3 12-11 18-23 17Z" fill="#448f52"/><path d="M50 26c-25-17-38 7-30 30 6 18 19 29 30 34 11-5 24-16 30-34 8-23-5-47-30-30Z" fill="#e77b6d"/><path d="M50 31c-7 17-6 36 0 54" fill="none" stroke="#bd4d52"/></g>'
 };
-const state={level:1,unlockedLevel:1,tiles:[],selected:null,history:[],seconds:0,hints:0,shuffles:0,hintUses:2,shuffleUses:2,lives:5,lifeDate:'',shareDate:'',shareCount:0,checkinHistory:[],checkinPrompted:false,language:'自动检测',playerName:'玩家',avatarIndex:0,pendingLevel:null,pendingTool:null,cloudLinked:false,timer:null,sound:true,haptic:true,started:false,initial:0,coachStep:0,tutorialPair:[],records:{},animating:false,effectId:0,dealing:false,dealTimer:null,initialTypeCount:0};
+const state={level:1,unlockedLevel:1,tiles:[],seconds:0,hints:0,shuffles:0,lives:5,lifeDate:'',shareDate:'',shareCount:0,checkinHistory:[],checkinPrompted:false,language:'自动检测',playerName:'玩家',avatarIndex:0,pendingLevel:null,pendingTool:null,cloudLinked:false,timer:null,sound:true,haptic:true,motion:true,started:false,initial:0,records:{},animating:false,effectId:0,dealing:false,dealTimer:null,initialTypeCount:0,slots:[],settleTimer:null,score:0,combo:1,comboUntil:0,tick:0,remain:600,over:false,tools:{clear:1,shuffle:1,undo:1,magnet:1}};
 
 function todayKey(){const d=new Date();return`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`}
 const VIDEO_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="14" height="14" rx="4"/><path d="m17 10 4-2v8l-4-2Z"/></svg>';
@@ -36,9 +36,9 @@ function updateShareUI(){$('#shareStatus').textContent=state.shareCount<1?'今�
 function updateLanguageUI(){const status=$('#languageStatus');if(status)status.textContent=state.language;$$('#languageList button').forEach(btn=>btn.classList.toggle('selected',btn.dataset.language===state.language))}
 function renderCheckin(){const box=$('#checkinWeek');if(!box)return;const now=new Date(),day=now.getDay()||7,monday=new Date(now);monday.setHours(0,0,0,0);monday.setDate(now.getDate()-day+1);box.innerHTML='';['一','二','三','四','五','六','日'].forEach((label,i)=>{const d=new Date(monday);d.setDate(monday.getDate()+i);const key=dateKey(d),reward=i>=5?2:1,el=document.createElement('div');el.className=`checkin-day${key===todayKey()?' today':''}${state.checkinHistory.includes(key)?' claimed':''}`;el.innerHTML=`<small>周${label}</small><b>${state.checkinHistory.includes(key)?'✓':'⚡'}</b><span>+${reward}</span>`;box.appendChild(el)});const signed=state.checkinHistory.includes(todayKey());$('#claimCheckinBtn').disabled=signed;$('#claimCheckinBtn').textContent=signed?'今日已签到':'签到领取体力';$('#checkinStatus').textContent=signed?'今日已签到':'今日未签到'}
 function openCheckin(){renderCheckin();openSheet('checkinSheet')}
-function loadPrefs(){try{const p=JSON.parse(localStorage.getItem('sparrow-prefs')||'{}');state.sound=p.sound!==false;state.haptic=p.haptic!==false;state.language=localStorage.getItem('mahjong-language')||'自动检测';state.cloudLinked=localStorage.getItem('mahjong-google-linked')==='true';syncSettingToggles();updateCloudUI();updateLanguageUI();loadLives();state.records=JSON.parse(localStorage.getItem('sparrow-records-v36')||'{}');const save=JSON.parse(localStorage.getItem('sparrow-progress-v36')||'null');state.unlockedLevel=Math.max(1,save?.level||1);state.level=state.unlockedLevel;const completed=Object.keys(state.records).length;$('#startLabel').textContent=`挑战第 ${state.unlockedLevel} 关`;$('#recordSummary').textContent=completed?`已完成 ${completed} 关 · 继续向上`:'从第1关开始体验';renderJourney();loadSocialRewards()}catch(e){}}
-function syncSettingToggles(){['soundToggle','gameSoundToggle'].forEach(id=>{const el=$('#'+id);if(el)el.checked=state.sound});['hapticToggle','gameHapticToggle'].forEach(id=>{const el=$('#'+id);if(el)el.checked=state.haptic});const icon=$('#soundIcon');if(icon)icon.textContent=state.sound?'◉':'○'}
-function savePrefs(){localStorage.setItem('sparrow-prefs',JSON.stringify({sound:state.sound,haptic:state.haptic}))}
+function loadPrefs(){try{const p=JSON.parse(localStorage.getItem('sparrow-prefs')||'{}');state.sound=p.sound!==false;state.haptic=p.haptic!==false;state.motion=p.motion!==false;state.language=localStorage.getItem('mahjong-language')||'自动检测';state.cloudLinked=localStorage.getItem('mahjong-google-linked')==='true';syncSettingToggles();updateCloudUI();updateLanguageUI();loadLives();state.records=JSON.parse(localStorage.getItem('sparrow-records-v36')||'{}');const save=JSON.parse(localStorage.getItem('sparrow-progress-v36')||'null');state.unlockedLevel=Math.max(1,save?.level||1);state.level=state.unlockedLevel;const completed=Object.keys(state.records).length;$('#startLabel').textContent=`挑战第 ${state.unlockedLevel} 关`;$('#recordSummary').textContent=completed?`已完成 ${completed} 关 · 继续向上`:'从第1关开始体验';renderJourney();loadSocialRewards()}catch(e){}}
+function syncSettingToggles(){['soundToggle','gameSoundToggle'].forEach(id=>{const el=$('#'+id);if(el)el.checked=state.sound});['hapticToggle','gameHapticToggle'].forEach(id=>{const el=$('#'+id);if(el)el.checked=state.haptic});['motionToggle','gameMotionToggle'].forEach(id=>{const el=$('#'+id);if(el)el.checked=state.motion});const icon=$('#soundIcon');if(icon)icon.textContent=state.sound?'◉':'○'}
+function savePrefs(){localStorage.setItem('sparrow-prefs',JSON.stringify({sound:state.sound,haptic:state.haptic,motion:state.motion}))}
 function saveProgress(){localStorage.setItem('sparrow-progress-v36',JSON.stringify({level:state.unlockedLevel}));if(state.cloudLinked)localStorage.setItem('mahjong-cloud-progress-demo',JSON.stringify(cloudProgress()))}
 function showScreen(id){$$('.screen').forEach(x=>x.classList.toggle('is-active',x.id===id));}
 function openSheet(id){$('#overlay').classList.add('show');$('#overlay').classList.toggle('share-overlay',id==='shareSheet');$('#overlay').setAttribute('aria-hidden','false');$('#'+id).classList.add('show');if(['pauseSheet','lifeInfoSheet','lifeSheet','energyAdSheet','toolAdSheet'].includes(id)){stopTimer();syncSettingToggles()}}
@@ -48,22 +48,45 @@ let audioCtx;function tone(freq=450,duration=.06){if(!state.sound)return;try{aud
 function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),1500)}
 
 function seeded(seed){let s=(seed*9301+49297)%233280;return()=>{s=(s*9301+49297)%233280;return s/233280}}
-function tileCountForLevel(level){if(level===1)return 8;return Math.min(68,12+2*Math.floor((level-2)/2))}
+function tileCountForLevel(level){const n=Math.min(120,30+15*(level-1));return n-n%3}
+function boardAspect(){const b=$('#board').getBoundingClientRect();return b.width>8&&b.height>8?b.width/b.height:.76}
 function makeLayout(level,rnd){
-  const count=tileCountForLevel(level),positions=[],cols=Math.max(3,Math.round(Math.sqrt(count*1.2)));
-  for(let i=0;i<count;i++){
-    const r=rnd();
-    positions.push({x:(i%cols)*.82+(rnd()-.5)*.9,y:Math.floor(i/cols)*.82+(rnd()-.5)*.9,z:r<.5?0:r<.83?1:2,rot:(rnd()-.5)*56});
+  const count=tileCountForLevel(level),aspect=boardAspect();
+  const counts=[Math.round(count*.42),Math.round(count*.34)];
+  counts.push(count-counts[0]-counts[1]);
+  const n0=counts[0];
+  // 选一个让牌堆外形最贴近牌桌比例的底层网格，牌堆才会铺满整张桌子而不是缩成一团
+  let best=null;
+  for(let cols=3;cols<=14;cols++){
+    const rows=Math.ceil(n0/cols);
+    const fx=(cols-1)*.84+1.12,fy=((rows-1)*.82+1.02)*1.368;
+    const err=Math.abs(fx/fy-aspect);
+    if(!best||err<best.err)best={cols,rows,err};
   }
-  for(let pass=0;pass<3;pass++)for(let a=0;a<positions.length;a++)for(let b=a+1;b<positions.length;b++){
+  const fullX=(best.cols-1)*.84,fullY=(best.rows-1)*.82,positions=[];
+  counts.forEach((n,z)=>{
+    if(n<=0)return;
+    // 每层都铺满同一片区域，上层只是牌更少更稀，堆出来是一整片乱牌而不是金字塔
+    const cols=Math.min(n,Math.max(2,Math.round(best.cols*Math.sqrt(n/n0)))),rows=Math.ceil(n/cols);
+    for(let i=0;i<n;i++){
+      const row=Math.floor(i/cols),col=i-row*cols,inRow=Math.min(cols,n-row*cols);
+      positions.push({
+        x:(inRow>1?col/(inRow-1):.5)*fullX+(rnd()-.5)*.36,
+        y:(rows>1?row/(rows-1):.5)*fullY+(rnd()-.5)*.34,
+        z,
+        rot:(rnd()-.5)*74
+      });
+    }
+  });
+  // 同层里几乎完全重合的推开一点，其余保持互相压着
+  for(let pass=0;pass<2;pass++)for(let a=0;a<positions.length;a++)for(let b=a+1;b<positions.length;b++){
     const p=positions[a],q=positions[b];
     if(p.z!==q.z)continue;
-    const dx=q.x-p.x,dy=q.y-p.y,d2=dx*dx+dy*dy;
-    if(d2>.0001&&d2<.1225){const d=Math.sqrt(d2),push=(.35-d)/2;q.x+=dx/d*push;q.y+=dy/d*push;p.x-=dx/d*push;p.y-=dy/d*push}
-    else if(d2<=.0001){q.x+=.2;q.y+=.13}
+    const dx=q.x-p.x,dy=q.y-p.y,d2=dx*dx+dy*dy,min=.34;
+    if(d2>=min*min)continue;
+    const d=Math.sqrt(d2)||.02,push=(min-d)/2;
+    q.x+=dx/d*push;q.y+=dy/d*push;p.x-=dx/d*push;p.y-=dy/d*push;
   }
-  const maxZ=Math.max(0,...positions.map(p=>p.z));
-  for(let z=maxZ;z>=1;z--)if(positions.filter(p=>p.z===z).length%2){const p=positions.find(p=>p.z===z);p.z=z-1}
   return positions;
 }
 function starLabel(stars){const n=Math.max(0,Math.min(3,stars));return`${'★'.repeat(n)}${'☆'.repeat(3-n)}`}
@@ -84,33 +107,78 @@ function renderJourney(){
   }
   requestAnimationFrame(()=>{const current=map.querySelector('.current');if(current)map.scrollTop=Math.max(0,current.offsetTop-map.clientHeight*.28)});
 }
-function planSolvablePairs(){
-  const order=[...state.tiles].sort((a,b)=>b.z-a.z||a.y-b.y||a.x-b.x),pairs=[];
-  for(let i=0;i<order.length;i+=2)pairs.push([order[i].id,order[i+1].id]);
-  return pairs;
+const TILT=28,TILT_COS=Math.cos(TILT*Math.PI/180);
+function removalOrder(list){return[...list].sort((a,b)=>b.z-a.z||a.y-b.y||a.x-b.x)}
+function shuffleWith(rnd,list){const c=[...list];for(let i=c.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[c[i],c[j]]=[c[j],c[i]]}return c}
+function dealTriples(rnd){
+  const total=state.tiles.length,groupCount=Math.floor(total/3);
+  const pool=shuffleWith(rnd,SYMBOLS),cap=Math.max(5,Math.min(pool.length,Math.ceil(groupCount*.63))),types=pool.slice(0,cap);
+  const bag=[];
+  for(let i=0;i<groupCount;i++){const t=types[i%types.length];bag.push(t,t,t)}
+  // 任何一张牌都能点，只要每种牌是 3 的倍数就一定能通关，所以类型完全打散，
+  // 相同的牌不会挤在一起（按取牌顺序分组会让三张同款紧挨着）
+  const mixed=shuffleWith(rnd,bag);
+  shuffleWith(rnd,state.tiles).forEach((tile,i)=>tile.type=mixed[i]);
 }
-function dealSolvable(rnd){
-  const pairs=planSolvablePairs(),suits=SYMBOLS.filter(x=>x.endsWith('筒')||x.endsWith('索')),pictures=SYMBOLS.filter(x=>PICTURE_TILES[x]);
-  const shuffle=list=>{const copy=[...list];for(let i=copy.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[copy[i],copy[j]]=[copy[j],copy[i]]}return copy};
-  const suitPairs=Math.round(pairs.length*.8),picturePairs=pairs.length-suitPairs,suitOrder=shuffle(suits),pictureOrder=shuffle(pictures),pairTypes=[];
-  for(let i=0;i<suitPairs;i++)pairTypes.push(suitOrder[i%suitOrder.length]);
-  for(let i=0;i<picturePairs;i++)pairTypes.push(pictureOrder[i%pictureOrder.length]);
-  const mixed=shuffle(pairTypes);
-  pairs.forEach((ids,i)=>ids.forEach(id=>state.tiles.find(t=>t.id===id).type=mixed[i]));
-  state.solution=pairs;
+function reassignTypes(rnd){
+  const board=state.tiles.filter(t=>!t.removed&&!t.inTray);
+  const bag=shuffleWith(rnd,board.map(t=>t.type));
+  board.forEach((tile,i)=>tile.type=bag[i]);
 }
-function showTutorialPair(){const pair=findPair();if(!pair)return;state.tutorialPair=pair.map(t=>t.id);requestAnimationFrame(()=>pair.forEach(t=>$(`.tile[data-id="${t.id}"]`)?.classList.add('tutorial-target')))}
-function showTutorialMate(firstId){const first=state.tiles.find(t=>t.id===firstId),mate=state.tiles.find(t=>!t.removed&&t.id!==firstId&&t.type===first?.type&&isFree(t));if(mate)requestAnimationFrame(()=>$(`.tile[data-id="${mate.id}"]`)?.classList.add('tutorial-target'))}
 function launchLevel(level){loadLives();if(state.lives<=0){stopTimer();state.pendingLevel=level;openSheet('lifeSheet');return}state.lives--;saveLives();buildLevel(level)}
-function updateToolUses(){[['hint',state.hintUses],['shuffle',state.shuffleUses]].forEach(([name,count])=>{const badge=$(`#${name}Count`),btn=$(`#${name}Btn`);badge.innerHTML=count>0?String(count):VIDEO_ICON;badge.classList.toggle('video',count<=0);btn.classList.toggle('depleted',count<=0)})}
-function buildLevel(level){stopTimer();clearTimeout(state.dealTimer);const effectId=++state.effectId;state.animating=true;state.dealing=true;$$('.match-clone,.match-burst').forEach(el=>el.remove());state.level=level;state.seconds=0;state.hints=0;state.shuffles=0;state.hintUses=2;state.shuffleUses=2;state.history=[];state.selected=null;state.tutorialPair=[];state.coachStep=level===1?1:0;const rnd=seeded(level),positions=makeLayout(level,rnd),rnd2=seeded(level*7+3);state.tiles=positions.map((p,i)=>({id:i,type:'',...p,rot:p.rot??0,rot2:(rnd2()-.5)*14,removed:false}));dealSolvable(rnd);state.initial=state.tiles.length;state.initialTypeCount=new Set(state.tiles.map(t=>t.type)).size;$('#timer').textContent='00:00';$('#levelName').textContent=`第 ${level} 关`;showScreen('game');updateToolUses();render();const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,maxLayer=Math.max(...state.tiles.map(t=>t.z)),dealDuration=reduced?120:Math.min(1850,720+state.initial*12+maxLayer*180);if(!reduced)[180,620,1020].forEach((delay,i)=>setTimeout(()=>{if(effectId===state.effectId&&i<=maxLayer)tone(350+i*110,.055)},delay));state.dealTimer=setTimeout(()=>{if(effectId!==state.effectId)return;state.dealing=false;state.animating=false;$('#boardWrap').classList.remove('is-dealing');$$('.deal-in').forEach(el=>el.classList.remove('deal-in'));startTimer();if(level===1){$('#coach').classList.remove('hidden');$('#coachText').textContent='第1步：点击两张发光的相同麻将';showTutorialPair()}},dealDuration);saveProgress();if(level!==1)$('#coach').classList.add('hidden')}
+const TOOL_LABEL={clear:'消除',shuffle:'洗牌',undo:'翻牌',magnet:'磁铁'};
+function updateToolUses(){$$('.g-prop').forEach(el=>{const n=state.tools[el.dataset.tool]||0;el.querySelector('.g-prop-count').textContent=n;el.classList.toggle('empty',n<=0)})}
+function buildLevel(level){
+  stopTimer();clearTimeout(state.dealTimer);const effectId=++state.effectId;
+  const hands=$('#boardWrap .shuffle-hands');
+  if(hands)hands.replaceWith(hands.cloneNode(true));
+  state.animating=true;state.dealing=true;state.over=false;
+  $$('.match-clone,.match-burst').forEach(el=>el.remove());closeSheets(false);
+  state.level=level;state.seconds=0;state.tick=0;state.remain=600;state.hints=0;state.shuffles=0;
+  state.slots=[];state.score=0;state.combo=1;state.comboUntil=0;
+  state.tools={clear:1,shuffle:1,undo:1,magnet:1};
+  showScreen('game');
+  const rnd=seeded(level),positions=makeLayout(level,rnd),rnd2=seeded(level*7+3);
+  state.tiles=positions.map((p,i)=>({id:i,type:'',...p,layoutX:p.x,layoutY:p.y,layoutZ:p.z,rot:p.rot??0,rot2:(rnd2()-.5)*14,removed:false,inTray:false,stand:0,leanOn:null}));
+  dealTriples(rnd);assignLeaners(seeded(level*13+5));
+  state.initial=state.tiles.length;state.initialTypeCount=new Set(state.tiles.map(t=>t.type)).size;
+  $('#timer').textContent=formatTime(state.remain);$('#scoreCount').textContent='0';$('#levelName').textContent=level;
+  updateToolUses();updateCombo();render(true);renderTray();
+  const reduced=!state.motion,dealDuration=reduced?120:3400;
+  if(!reduced)[400,950,1550,2150,2820].forEach((delay,i)=>setTimeout(()=>{if(effectId===state.effectId)tone(260+i*35,.045)},delay));
+  state.dealTimer=setTimeout(()=>{
+    if(effectId!==state.effectId)return;
+    state.dealing=false;state.animating=false;$('#boardWrap').classList.remove('is-dealing');
+    $$('.deal-in').forEach(el=>el.classList.remove('deal-in'));render();
+    if(!$('#overlay').classList.contains('show'))startTimer();
+    if(level===1){$('#coach').classList.remove('hidden');$('#coachText').textContent='点击麻将放进卡槽，凑满三张相同即可消除';setTimeout(()=>$('#coach').classList.add('hidden'),4200)}
+  },dealDuration);
+  saveProgress();if(level!==1)$('#coach').classList.add('hidden');
+}
 function tileStatus(t){
-  if(t.removed)return{free:false,reason:'removed',blockers:[]};
-  const above=state.tiles.filter(o=>!o.removed&&o.z>t.z&&Math.abs(o.x-t.x)<.88&&Math.abs(o.y-t.y)<.88);
-  if(above.length)return{free:false,reason:'above',blockers:above.map(o=>o.id)};
-  return{free:true,reason:'free',blockers:[]};
+  if(t.removed||t.inTray)return{free:false,blockers:[]};
+  const above=state.tiles.filter(o=>!o.removed&&!o.inTray&&o.z>t.z&&Math.abs(o.x-t.x)<.88&&Math.abs(o.y-t.y)<.88);
+  return{free:!above.length,blockers:above.map(o=>o.id)};
 }
 function isFree(t){return tileStatus(t).free}
+function assignLeaners(rnd){
+  TileMotion.assignLeaners(state.tiles,rnd);
+}
+function settleBoard(){
+  let changed=false;
+  const targets=TileMotion.targets(state.tiles);
+  for(const t of state.tiles){
+    const goal=targets.get(t.id);
+    if(!goal||goal.z===t.z&&goal.lean===(t.stand||0)&&goal.x===t.x)continue;
+    const from={...(t.motion?.current||{x:t.x,y:t.y,z:t.z,lean:t.stand||0})};
+    t.motion={from,current:{...from},target:goal,velocity:t.motion?.velocity||0,angularVelocity:t.motion?.angularVelocity||0};
+    t.x=goal.x;t.y=goal.y;t.z=goal.z;t.stand=goal.lean;t.leanOn=goal.leanOn;
+    if(!state.motion)t.motion=null;
+    changed=true;
+  }
+  if(changed)startTileMotion();
+  return changed;
+}
 const FACE_NUM={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9};
 const FACE_COLORS=['#146c59','#b52d2a','#21699a'];
 const FACE_POS={
@@ -151,27 +219,231 @@ function bambooFace(n){
   const pieces=patterns[n].map(([x,y,c])=>`<g transform="translate(${x} ${y})"><path d="M-6-11H6C3-7 3-3 6 0C3 3 3 7 6 11H-6C-3 7-3 3-6 0C-3-3-3-7-6-11Z" fill="#173d31"/><path d="M-4.2-9H4.2C2-5 2-2 4.2 0C2 2 2 5 4.2 9H-4.2C-2 5-2 2-4.2 0C-2-2-2-5-4.2-9Z" fill="${c}"/></g>`).join('');
   return svgFace(pieces);
 }
-function tileFace(type){const n=FACE_NUM[type[0]]||0,key=type.endsWith('筒')?`circle-${n}`:type.endsWith('索')?`bamboo-${n}`:PICTURE_TILES[type];return`<img class="tile-reference-art" src="assets/tiles/${key}.png" alt="" aria-hidden="true">`}
-function boardMetrics(){const xs=state.tiles.map(t=>t.x),ys=state.tiles.map(t=>t.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys),spanX=maxX-minX+.82,spanY=maxY-minY+.82,b=$('#board').getBoundingClientRect(),count=state.tiles.length,gap=0,maxLayer=Math.max(0,...state.tiles.map(t=>t.z)),edge={left:14+maxLayer*4,top:14+maxLayer*7,right:22,bottom:26},availableW=Math.max(1,b.width-edge.left-edge.right),availableH=Math.max(1,b.height-edge.top-edge.bottom),ratio=1.28,preferredMax=state.level===1?86:count<=16?112:count<=28?92:count<48?74:64,widthLimit=availableW/spanX,heightLimit=(availableH/spanY)/ratio,w=Math.max(20,Math.min(preferredMax,widthLimit,heightLimit)),h=w*ratio,totalW=w*spanX,totalH=h*spanY,freeX=Math.max(0,availableW-totalW),freeY=Math.max(0,availableH-totalH);return{w,h,gap,ox:edge.left+freeX/2-minX*(w+gap),oy:edge.top+freeY/2-minY*(h+gap)}}
-function render(){const board=$('#board'),m=boardMetrics(),dealOrder=state.dealing?state.tiles.filter(t=>!t.removed).sort((a,b)=>a.z-b.z||Math.abs(a.x-2.5)-Math.abs(b.x-2.5)||a.y-b.y).map(t=>t.id):[];board.innerHTML='';$('#boardWrap').classList.toggle('is-dealing',state.dealing);state.tiles.forEach(t=>{if(t.removed)return;const status=tileStatus(t),el=document.createElement('button'),stateClass=status.reason==='above'?' covered':'',left=m.ox+t.x*(m.w+m.gap),top=m.oy+t.y*(m.h+m.gap),dealIndex=dealOrder.indexOf(t.id),dealClass=state.dealing?' deal-in':'';el.className=`tile layer-${t.z}${stateClass}${state.selected===t.id?' selected':''}${dealClass}`;el.dataset.id=t.id;el.innerHTML=tileFace(t.type);const label=status.free?'可选择':'被上层牌压住';el.setAttribute('aria-label',`${t.type}，${label}`);const rot=t.rot??0,rot2=t.rot2??0,restX=t.z*-4,restY=t.z*-7;el.style.cssText=`width:${m.w}px;height:${m.h}px;left:${left}px;top:${top}px;z-index:${t.z+2};--rest-rot:${rot+rot2}deg;--rest-x:${restX}px;--rest-y:${restY}px;--deal-x:${board.clientWidth/2-(left+m.w/2)}px;--deal-y:${board.clientHeight*.46-(top+m.h/2)}px;--deal-delay:${Math.max(0,dealIndex)*10+t.z*150}ms;--deal-lift:${t.z*46}px;--deal-rotate:${dealIndex%2?'-10deg':'10deg'}`;el.onclick=()=>selectTile(t.id);board.appendChild(el)});const active=state.tiles.filter(t=>!t.removed);$('#totalCount').textContent=state.initial;$('#remainingTypes').textContent=state.initialTypeCount;$('#remainingCount').textContent=active.length}
-function pulseBlockers(ids){ids.forEach(id=>{const el=$(`.tile[data-id="${id}"]`);el?.classList.add('blocker-pulse');setTimeout(()=>el?.classList.remove('blocker-pulse'),850)})}
-function playMatchEffect(ids,done){
-  const wrap=$('#boardWrap'),wrapRect=wrap.getBoundingClientRect(),els=ids.map(id=>$(`.tile[data-id="${id}"]`));
-  if(els.some(el=>!el)){done();return}
-  const rects=els.map(el=>el.getBoundingClientRect()),center={x:(rects[0].left+rects[0].width/2+rects[1].left+rects[1].width/2)/2-wrapRect.left,y:(rects[0].top+rects[0].height/2+rects[1].top+rects[1].height/2)/2-wrapRect.top};
-  const clones=els.map((el,i)=>{const r=rects[i],clone=el.cloneNode(true);clone.className='tile match-clone';clone.style.cssText=`width:${r.width}px;height:${r.height}px;left:${r.left-wrapRect.left}px;top:${r.top-wrapRect.top}px;--match-x:${center.x-(r.left-wrapRect.left+r.width/2)}px;--match-y:${center.y-(r.top-wrapRect.top+r.height/2)}px;--match-rotate:${i?-7:7}deg`;clone.removeAttribute('data-id');wrap.appendChild(clone);el.style.opacity='0';return clone});
-  const burst=document.createElement('div');burst.className='match-burst';burst.style.left=`${center.x}px`;burst.style.top=`${center.y}px`;burst.innerHTML=`<i class="burst-ring"></i><b>碰</b>${Array.from({length:10},(_,i)=>`<span style="--spark-angle:${i*36}deg;--spark-delay:${i%3*18}ms"></span>`).join('')}`;wrap.appendChild(burst);
-  tone(540,.08);setTimeout(()=>{tone(820,.15);haptic([12,24,28])},180);
-  setTimeout(()=>{clones.forEach(x=>x.remove());burst.remove();done()},560);
+const WAN_CHARS=['','一','二','三','四','伍','六','七','八','九'];
+function embossText(cls,ch,y){return`<text class="${cls} wan-sh" x="50.5" y="${y+.6}">${ch}</text><text class="${cls} wan-hi" x="49.6" y="${y-.4}">${ch}</text><text class="${cls}" x="50" y="${y}">${ch}</text>`}
+function wanFace(n){return`<svg class="tile-art" viewBox="0 0 100 137" aria-hidden="true">${embossText('wan-num',WAN_CHARS[n],58)}${embossText('wan-char','萬',122)}</svg>`}
+function tileFace(type){const n=FACE_NUM[type[0]]||0;if(type.endsWith('萬'))return wanFace(n);const key=type.endsWith('筒')?`circle-${n}`:type.endsWith('索')?`bamboo-${n}`:PICTURE_TILES[type];return`<img class="tile-reference-art" src="assets/tiles-face/${key}.png" alt="" aria-hidden="true">`}
+function boardMetrics(){const xs=state.tiles.map(t=>t.layoutX??t.x),ys=state.tiles.map(t=>t.layoutY??t.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys),spanX=maxX-minX+1.12,spanY=maxY-minY+1.02,b=$('#board').getBoundingClientRect(),count=state.tiles.length,gap=0,maxLayer=Math.max(0,...state.tiles.map(t=>t.layoutZ??t.z)),edge={left:10+maxLayer*5,top:10+maxLayer*9,right:16,bottom:18},availableW=Math.max(1,b.width-edge.left-edge.right),availableH=Math.max(1,b.height-edge.top-edge.bottom),ratio=1.3636,preferredMax=state.level===1?96:count<=16?112:count<=28?100:count<48?86:78,widthLimit=availableW/spanX,heightLimit=(availableH/spanY)/ratio,w=Math.max(20,Math.min(preferredMax,widthLimit,heightLimit)),h=w*ratio,totalW=w*spanX,totalH=h*spanY,freeX=Math.max(0,availableW-totalW),freeY=Math.max(0,availableH-totalH);return{w,h,gap,ox:edge.left+freeX/2-minX*(w+gap),oy:edge.top+freeY/2-minY*(h+gap)}}
+const tileEls=new Map();
+function tileMarkup(t){
+  return`<span class="baked-body"><span class="baked-shell"></span><span class="baked-shell baked-shell-next"></span><span class="baked-art">${tileFace(t.type)}</span></span>`;
 }
-function selectTile(id){const t=state.tiles.find(x=>x.id===id),status=tileStatus(t);if(state.animating)return;if(!status.free){toast('上方还有牌压着，先消除上面的');pulseBlockers(status.blockers);haptic([10,35,10]);return}tone(420);haptic();if(state.selected===null){state.selected=id;render();if(state.coachStep===1){state.coachStep=2;$('#coachText').textContent='第2步：点击另一张相同麻将';showTutorialMate(id)}return}if(state.selected===id){state.selected=null;render();return}const first=state.tiles.find(x=>x.id===state.selected);if(first.type!==t.type){state.selected=id;toast('图案不同，再看看');render();if(state.coachStep===2)showTutorialMate(id);return}const ids=[first.id,t.id],effectId=++state.effectId;state.animating=true;state.history.push(ids);state.selected=null;playMatchEffect(ids,()=>{if(effectId!==state.effectId)return;ids.forEach(x=>state.tiles.find(t=>t.id===x).removed=true);state.animating=false;render();if(state.coachStep){state.coachStep=3;$('#coach').classList.remove('hidden');$('#coachText').textContent='配对成功！继续清空剩余麻将';toast('漂亮的一碰！');setTimeout(()=>{if(state.level===1&&state.coachStep===3){state.coachStep=0;$('#coach').classList.add('hidden')}},2200)}if(state.tiles.every(x=>x.removed))setTimeout(finishLevel,420)})}
-function findPair(){const free=state.tiles.filter(isFree);for(let i=0;i<free.length;i++)for(let j=i+1;j<free.length;j++)if(free[i].type===free[j].type)return[free[i],free[j]];return null}
-function requestToolAd(tool){stopTimer();state.pendingTool=tool;$('#toolAdTitle').textContent=tool==='hint'?'补充1次提示':'补充1次洗牌';openSheet('toolAdSheet')}
-function hint(){if(state.hintUses<=0){requestToolAd('hint');return}const p=findPair();if(!p){toast('暂时没有可配对的牌');return}state.hintUses--;state.hints++;updateToolUses();p.forEach(t=>{const el=$(`.tile[data-id="${t.id}"]`);el?.classList.add('hint');setTimeout(()=>el?.classList.remove('hint'),2100)});tone(750,.12);haptic()}
-function undo(){if(state.animating)return;const ids=state.history.pop();if(!ids)return;ids.forEach(id=>state.tiles.find(t=>t.id===id).removed=false);state.selected=null;render();toast('已撤销上一步')}
-function shuffleTiles(){if(state.animating)return;if(state.shuffleUses<=0){requestToolAd('shuffle');return}state.shuffleUses--;state.shuffles++;updateToolUses();dealSolvable(Math.random);state.selected=null;state.history=[];render();toast('牌面已重新整理，并保证可解');haptic([8,25,8])}
-function startTimer(){if(state.timer||state.dealing)return;state.timer=setInterval(()=>{state.seconds++;$('#timer').textContent=formatTime(state.seconds)},1000)}function stopTimer(){clearInterval(state.timer);state.timer=null}function formatTime(s){return`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
-function finishLevel(){stopTimer();const old=state.records[state.level],earnedStars=Math.max(0,3-state.hints-state.shuffles);state.records[state.level]={best:old?Math.min(old.best,state.seconds):state.seconds,played:(old?.played||0)+1,stars:Math.max(old?.stars||0,earnedStars)};state.unlockedLevel=Math.max(state.unlockedLevel,state.level+1);localStorage.setItem('sparrow-records-v36',JSON.stringify(state.records));saveProgress();$('#stars').innerHTML=Array.from({length:3},(_,i)=>`<span class="${i<earnedStars?'earned':'empty'}">★</span>`).join(' ');$('#resultQuote').textContent=earnedStars===0?'借助工具也没关系，下一局试试刷新纪录。':state.level>20?'无尽之路，没有最后一关。':'很好，下一局会多一点变化。';$('#nextBtn .cta-copy b').textContent='下一关';$('#result').classList.add('is-active');haptic([20,40,20,40,40]);tone(760,.18)}
+function poseTransform(t,lean,z,width=0){
+  const spin=(t.rot||0)+(t.rot2||0);
+  const lift=Math.abs(Math.sin(lean*Math.PI/180))*width*.27;
+  return`translate(${-z*5}px,${-z*9-lift}px) rotate(${spin}deg)`;
+}
+function tileTransform(t){
+  return poseTransform(t,t.stand||0,t.z);
+}
+function paintTilePose(el,t,p,m){
+  const sample=Math.max(0,Math.min(TILE_POSES.length-1,(p.lean+70)/5));
+  const index=Math.floor(sample),next=Math.min(TILE_POSES.length-1,index+1),blend=sample-index;
+  const body=el.firstElementChild;
+  if(body._sample!==sample||body._width!==m.w){
+    body.dataset.pose=Math.round(sample);body._sample=sample;body._width=m.w;
+    body.querySelector('.baked-shell').style.backgroundPosition=`${index%6*20}% ${Math.floor(index/6)*25}%`;
+    const overlay=body.querySelector('.baked-shell-next');
+    overlay.style.backgroundPosition=`${next%6*20}% ${Math.floor(next/6)*25}%`;overlay.style.opacity=blend;
+    const [a,b,c,d,x,y]=TILE_POSES[index].matrix.map((v,i)=>v+(TILE_POSES[next].matrix[i]-v)*blend);
+    body.querySelector('.baked-art').style.transform=`matrix(${a},${b},${c},${d},${x*m.w},${y*m.w})`;
+  }
+  el.style.left=`${m.ox+p.x*(m.w+m.gap)}px`;
+  el.style.top=`${m.oy+p.y*(m.h+m.gap)}px`;
+  el.style.transform=poseTransform(t,p.lean,p.z,m.w);
+  el.style.zIndex=String(TileMotion.depth(p.z,p.lean,Math.max(0,...state.tiles.map(o=>o.layoutZ??o.z))));
+  el.style.setProperty('--contact-shadow',`${1+p.z*2+Math.abs(p.lean)*.025}px`);
+}
+let tileMotionFrame=0,tileMotionTime=0;
+function startTileMotion(){
+  if(tileMotionFrame)return;
+  tileMotionTime=performance.now();
+  const tick=now=>{
+    const dt=Math.min(.05,(now-tileMotionTime)/1000);tileMotionTime=now;
+    let active=false;const m=boardMetrics();
+    for(const t of state.tiles){
+      if(!t.motion||t.removed||t.inTray)continue;
+      let done=false;
+      const steps=Math.max(1,Math.ceil(dt/.016));
+      for(let i=0;i<steps&&!done;i++)done=TileMotion.step(t.motion,dt/steps);
+      const el=tileEls.get(t.id);
+      if(el)paintTilePose(el,t,t.motion.current,m);
+      if(done){t.motion=null;el?.classList.remove('settling');}else active=true;
+    }
+    tileMotionFrame=active?requestAnimationFrame(tick):0;
+  };
+  tileMotionFrame=requestAnimationFrame(tick);
+}
+function render(rebuild=false){
+  const board=$('#board'),m=boardMetrics();$('#game').dataset.motion=state.motion?'on':'off';
+  if(rebuild){board.innerHTML='';tileEls.clear()}
+  if(rebuild)state.tiles.forEach(t=>{t.animFrom=null;t.animStarted=false});
+  const live=state.tiles.filter(t=>!t.removed&&!t.inTray),liveIds=new Set(live.map(t=>t.id));
+  tileEls.forEach((el,id)=>{if(!liveIds.has(id)){el.remove();tileEls.delete(id)}});
+  $('#boardWrap').classList.toggle('is-dealing',state.dealing);
+  const dealOrder=state.dealing?[...live].sort((a,b)=>a.z-b.z||Math.abs(a.x-2.5)-Math.abs(b.x-2.5)||a.y-b.y).map(t=>t.id):[];
+  live.forEach(t=>{
+    let el=tileEls.get(t.id);
+    if(!el){
+      el=document.createElement('button');el.dataset.id=t.id;
+      el.onclick=()=>pickTile(t.id);board.appendChild(el);tileEls.set(t.id,el);
+    }
+    if(el.dataset.type!==t.type){el.dataset.type=t.type;el.innerHTML=tileMarkup(t);el._key=null}
+    const lean=t.stand||0;
+    const wantCls=`tile layer-${t.z}${state.dealing?' deal-in':''}${lean?' standing':''}${t.motion?' settling':''}`;
+    if(el.className!==wantCls)el.className=wantCls;
+    el.setAttribute('aria-label',t.type);
+    el.dataset.support=t.leanOn??'';
+    const left=m.ox+t.x*(m.w+m.gap),top=m.oy+t.y*(m.h+m.gap),dealIndex=dealOrder.indexOf(t.id);
+    const boxH=m.w*1.4,cls=wantCls,zi=TileMotion.depth(t.z,lean,Math.max(0,...state.tiles.map(o=>o.layoutZ??o.z)));
+    // 每次点牌只有少数几张真的变了，跳过没变的牌，避免整盘 105 张全部重排重绘
+    const key=`${m.w}|${boxH}|${left}|${top}|${zi}|${cls}|${t.stand}|${t.animStarted}|${state.dealing}`;
+    if(el._key===key)return;
+    el._key=key;
+    el.style.width=`${m.w}px`;el.style.height=`${boxH.toFixed(2)}px`;
+    if(!(t.animFrom&&!t.animStarted)){el.style.left=`${left}px`;el.style.top=`${top}px`}
+    el.style.setProperty('--tw',`${m.w}px`);el.style.setProperty('--th',`${boxH.toFixed(2)}px`);el.style.setProperty('--td',`${(m.w*.22).toFixed(1)}px`);
+    el.style.zIndex=zi;   // 立起来的牌比整堆都高，不该被上层平牌盖住
+    el.style.transformOrigin='50% 50%';
+    paintTilePose(el,t,t.motion?.current||{x:t.x,y:t.y,z:t.z,lean},m);
+    el.style.setProperty('--rest-x',`${-t.z*5}px`);
+    el.style.setProperty('--rest-y',`${-t.z*9-Math.abs(Math.sin(lean*Math.PI/180))*m.w*.27}px`);
+    el.style.setProperty('--rest-rot',`${(t.rot||0)+(t.rot2||0)}deg`);
+    el.style.setProperty('--deal-lift','30px');
+    if(state.dealing){
+      el.style.setProperty('--deal-x',`${board.clientWidth/2-(left+m.w/2)}px`);
+      el.style.setProperty('--deal-y',`${board.clientHeight*.46-(top+m.h/2)}px`);
+      el.style.setProperty('--deal-delay',`${Math.max(0,dealIndex)*8+t.z*150}ms`);
+      el.style.setProperty('--deal-rotate',dealIndex%2?'-10deg':'10deg');
+      el.style.setProperty('--wash-x',`${Math.sin(t.id*2.4)*m.w*.7}px`);
+      el.style.setProperty('--wash-y',`${Math.cos(t.id*1.7)*m.h*.45}px`);
+      el.style.setProperty('--wash-spin',`${(t.id%2?1:-1)*(18+t.id%23)}deg`);
+    }
+  });
+  $('#totalCount').textContent=state.initial;
+  $('#remainingTypes').textContent=state.initialTypeCount;
+  $('#remainingCount').textContent=state.tiles.filter(t=>!t.removed).length;
+}
+function renderTray(popIndex=-1){
+  const tray=$('#slotTray');tray.innerHTML='';
+  for(let i=0;i<7;i++){
+    const t=state.slots[i],slot=document.createElement('div');
+    slot.className=`g-slot${t?' filled':''}${i===popIndex?' pop':''}`;
+    if(t)slot.innerHTML=tileFace(t.type);
+    tray.appendChild(slot);
+  }
+  tray.classList.toggle('danger',state.slots.length>=6);
+}
+function updateCombo(){
+  const fill=$('#comboFill');if(!fill)return;
+  const left=Math.max(0,state.comboUntil-Date.now());
+  $('#comboText').textContent=`x${state.combo}`;
+  fill.style.width=`${state.combo>1?left/5000*100:100}%`;
+}
+function bumpCombo(){const now=Date.now();state.combo=now<state.comboUntil?Math.min(9,state.combo+1):1;state.comboUntil=now+5000;updateCombo()}
+function pickTile(id){
+  if(state.animating||state.over||state.dealing)return;
+  const t=state.tiles.find(x=>x.id===id);if(!t||t.removed||t.inTray)return;
+  if(state.slots.length>=7){toast('卡槽已满');return}
+  moveToTray(t);tone(430);haptic();
+}
+function moveToTray(t){
+  t.motion=null;
+  t.inTray=true;
+  const last=state.slots.map(s=>s.type).lastIndexOf(t.type),idx=last>=0?last+1:state.slots.length;
+  state.slots.splice(idx,0,t);settleBoard();
+  render();renderTray(idx);resolveTray();
+}
+function resolveTray(){
+  const counts={};state.slots.forEach(s=>counts[s.type]=(counts[s.type]||0)+1);
+  const hit=Object.keys(counts).find(k=>counts[k]>=3);
+  if(!hit){checkFail();return}
+  state.animating=true;
+  const picks=state.slots.filter(s=>s.type===hit).slice(0,3),cells=$$('#slotTray .g-slot');
+  picks.forEach(p=>cells[state.slots.indexOf(p)]?.classList.add('clearing'));
+  tone(620,.1);setTimeout(()=>tone(880,.14),140);haptic([12,24,28]);
+  setTimeout(()=>{
+    picks.forEach(p=>{p.removed=true;p.inTray=false;state.slots.splice(state.slots.indexOf(p),1)});
+    settleBoard();bumpCombo();state.score+=state.combo;$('#scoreCount').textContent=state.score;
+    state.animating=false;render();renderTray();
+    if(state.tiles.every(x=>x.removed))setTimeout(finishLevel,380);else checkFail();
+  },300);
+}
+function checkFail(){
+  $('#slotTray').classList.toggle('danger',state.slots.length>=6);
+  if(state.slots.length>=7)failLevel('卡槽已满','卡槽放满 7 张，但没有凑齐三张相同的麻将。');
+}
+function clearTiles(picks,label){
+  state.animating=true;
+  picks.forEach(t=>$(`.tile[data-id="${t.id}"]`)?.classList.add('picked'));
+  tone(620,.1);setTimeout(()=>tone(880,.14),140);
+  setTimeout(()=>{
+    picks.forEach(t=>{t.removed=true;t.inTray=false});
+    state.slots=state.slots.filter(s=>!picks.includes(s));
+    settleBoard();bumpCombo();state.score+=state.combo;$('#scoreCount').textContent=state.score;
+    state.animating=false;render();renderTray();
+    if(label)toast(label);
+    if(state.tiles.every(x=>x.removed))setTimeout(finishLevel,380);else checkFail();
+  },260);
+}
+function requestToolAd(tool){stopTimer();state.pendingTool=tool;$('#toolAdTitle').textContent=`补充1次${TOOL_LABEL[tool]||'道具'}`;openSheet('toolAdSheet')}
+function useTool(name){
+  if(state.animating||state.over||state.dealing)return;
+  if((state.tools[name]||0)<=0){requestToolAd(name);return}
+  const run={clear:toolClear,shuffle:toolShuffle,undo:toolUndo,magnet:toolMagnet}[name];
+  if(!run||run()===false)return;
+  state.tools[name]--;updateToolUses();haptic([8,20,8]);
+}
+function toolClear(){
+  const board=state.tiles.filter(t=>!t.removed&&!t.inTray),counts={};
+  board.forEach(t=>counts[t.type]=(counts[t.type]||0)+1);
+  const type=Object.keys(counts).filter(k=>counts[k]>=3).sort((a,b)=>counts[b]-counts[a])[0];
+  if(!type){toast('牌面上没有可直接消除的三张');return false}
+  clearTiles(removalOrder(board.filter(t=>t.type===type)).slice(0,3),`消除了三张${type}`);
+}
+function toolShuffle(){
+  reassignTypes(Math.random);state.shuffles++;render();renderTray();
+  toast('牌面已重新洗过');
+}
+function toolUndo(){
+  const t=state.slots.pop();
+  if(!t){toast('卡槽是空的，无需回退');return false}
+  t.inTray=false;render();renderTray();checkFail();
+  toast('已把最后一张放回牌面');
+}
+function toolMagnet(){
+  const counts={};state.slots.forEach(s=>counts[s.type]=(counts[s.type]||0)+1);
+  const type=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+  if(!type){toast('卡槽为空，磁铁没有目标');return false}
+  const need=3-counts[type],board=state.tiles.filter(t=>!t.removed&&!t.inTray&&t.type===type);
+  if(board.length<need){toast('牌面里没有足够的同款麻将');return false}
+  clearTiles([...state.slots.filter(s=>s.type===type),...removalOrder(board).slice(0,need)],`磁铁吸出了${need}张${type}`);
+}
+function shuffleTiles(){useTool('shuffle')}
+function startTimer(){
+  if(state.timer||state.dealing||state.over)return;
+  state.timer=setInterval(()=>{
+    state.tick++;
+    if(state.tick%10===0){
+      state.remain--;state.seconds++;
+      $('#timer').textContent=formatTime(Math.max(0,state.remain));
+      $('.g-timer')?.classList.toggle('urgent',state.remain<=60);
+      if(state.remain<=10&&state.remain>0)tone(700,.05);
+      if(state.remain<=0){stopTimer();failLevel('时间到','本局 10 分钟已经用完。');return}
+    }
+    if(state.combo>1&&Date.now()>=state.comboUntil)state.combo=1;
+    updateCombo();
+  },100);
+}
+function stopTimer(){clearInterval(state.timer);state.timer=null}
+function formatTime(s){return`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
+function failLevel(title,desc){
+  if(state.over)return;
+  state.over=true;stopTimer();state.animating=false;
+  $('#failTitle').textContent=title;$('#failDesc').textContent=desc;
+  openSheet('failSheet');haptic([30,60,30]);tone(220,.3);
+}
+function finishLevel(){stopTimer();const old=state.records[state.level],earnedStars=state.remain>420?3:state.remain>240?2:1;state.records[state.level]={best:old?Math.min(old.best,state.seconds):state.seconds,played:(old?.played||0)+1,stars:Math.max(old?.stars||0,earnedStars)};state.unlockedLevel=Math.max(state.unlockedLevel,state.level+1);localStorage.setItem('sparrow-records-v36',JSON.stringify(state.records));saveProgress();$('#stars').innerHTML=Array.from({length:3},(_,i)=>`<span class="${i<earnedStars?'earned':'empty'}">★</span>`).join(' ');$('#resultQuote').textContent=earnedStars===0?'借助工具也没关系，下一局试试刷新纪录。':state.level>20?'无尽之路，没有最后一关。':'很好，下一局会多一点变化。';$('#nextBtn .cta-copy b').textContent='下一关';$('#result').classList.add('is-active');haptic([20,40,20,40,40]);tone(760,.18)}
 
 function recordStats(){const levels=Object.keys(state.records).map(Number),completed=levels.length,total=levels.reduce((sum,l)=>sum+(state.records[l]?.best||0),0),highest=Math.max(0,...levels);return{levels,completed,total,highest}}
 function showRecords(){const s=recordStats(),highestReached=Math.max(state.unlockedLevel,s.highest);$('#highestLevel').textContent=`第 ${highestReached} 关`;$('#recordMeta').textContent=`完成 ${s.completed} 关 · 最佳总时 ${formatLongTime(s.total)}`;const limit=Math.max(10,s.highest+3),list=$('#recordList');list.innerHTML='';for(let i=1;i<=limit;i++){const rec=state.records[i],row=document.createElement('div');row.className='record-row'+(rec?'':' locked');row.innerHTML=`<span class="record-number">${String(i).padStart(2,'0')}</span><span><b>第 ${i} 关</b><small>${rec?`挑战 ${rec.played||1} 次`:'尚未完成'}</small></span><strong class="record-time">${rec?formatTime(rec.best):'--:--'}</strong>`;list.appendChild(row)}showScreen('records')}
@@ -183,13 +455,13 @@ function goHome(){state.effectId++;clearTimeout(state.dealTimer);state.dealing=f
 function showGoogleAuth(){$('#soundSheet').classList.remove('show');$('#googleSheet').classList.add('show')}
 function hideGoogleAuth(){$('#googleSheet').classList.remove('show');$('#soundSheet').classList.add('show')}
 
-$('#startBtn').onclick=()=>launchLevel(state.unlockedLevel);$('#newJourneyBtn').onclick=()=>launchLevel(1);$('#recordsBtn')?.addEventListener('click',showRecords);$('#rankingBtn')?.addEventListener('click',showRanking);$$('.sub-back').forEach(b=>b.onclick=()=>{loadPrefs();showScreen('welcome')});$('#rankInfoBtn').onclick=()=>toast('同关卡数时，最佳总用时更少者优先');$('.ranking-tabs').onclick=e=>{if(e.target.tagName!=='BUTTON')return;$$('.ranking-tabs button').forEach(b=>b.classList.toggle('active',b===e.target));showRanking()};$('#hintBtn').onclick=hint;$('#shuffleBtn').onclick=()=>shuffleTiles();$('#nextBtn').onclick=()=>launchLevel(Math.max(state.level+1,state.unlockedLevel));$('#replayBtn').onclick=()=>launchLevel(state.level);
+$('#startBtn').onclick=()=>launchLevel(state.unlockedLevel);$('#newJourneyBtn').onclick=()=>launchLevel(1);$('#recordsBtn')?.addEventListener('click',showRecords);$('#rankingBtn')?.addEventListener('click',showRanking);$$('.sub-back').forEach(b=>b.onclick=()=>{loadPrefs();showScreen('welcome')});$('#rankInfoBtn').onclick=()=>toast('同关卡数时，最佳总用时更少者优先');$('.ranking-tabs').onclick=e=>{if(e.target.tagName!=='BUTTON')return;$$('.ranking-tabs button').forEach(b=>b.classList.toggle('active',b===e.target));showRanking()};$$('.g-prop').forEach(el=>{const tool=el.dataset.tool;el.querySelector('.g-prop-main').onclick=()=>useTool(tool);el.querySelector('.g-prop-add').onclick=e=>{e.stopPropagation();requestToolAd(tool)}});$('#pauseBtn').onclick=()=>openSheet('pauseSheet');$('#gMoreBtn').onclick=()=>openSheet('pauseSheet');$('#gRulesBtn').onclick=()=>openSheet('rulesSheet');$('#gQuitBtn').onclick=goHome;$('#failRetryBtn').onclick=()=>{closeSheets(false);launchLevel(state.level)};$('#failHomeBtn').onclick=goHome;$('#nextBtn').onclick=()=>launchLevel(Math.max(state.level+1,state.unlockedLevel));$('#replayBtn').onclick=()=>launchLevel(state.level);
 $('#resultHomeBtn').onclick=goHome;$$('[data-open]').forEach(b=>b.onclick=()=>openSheet(b.dataset.open));$$('[data-close]').forEach(b=>b.onclick=()=>closeSheets());$('#overlay').onclick=()=>closeSheets();$('#restartBtn').onclick=()=>{closeSheets(false);launchLevel(state.level)};$('#cloudSaveBtn').onclick=()=>state.cloudLinked?toast('进度已安全同步'):showGoogleAuth();$$('.google-cancel').forEach(b=>b.onclick=hideGoogleAuth);$('#googleSignInBtn').onclick=()=>{const btn=$('#googleSignInBtn');btn.disabled=true;btn.innerHTML='<span class="google-spinner"></span><span>正在连接Google…</span>';setTimeout(()=>{state.cloudLinked=true;localStorage.setItem('mahjong-google-linked','true');updateCloudUI();btn.disabled=false;btn.innerHTML='<span class="google-g">G</span><span>使用Google账号继续</span>';hideGoogleAuth();toast('进度已同步')},1100)};$('#watchAdBtn').onclick=()=>{const btn=$('#watchAdBtn');if(btn.disabled)return;btn.disabled=true;let n=3;btn.textContent=`广告播放中 · ${n}`;const timer=setInterval(()=>{n--;btn.textContent=n?`广告播放中 · ${n}`:'领取成功 · +1命';if(n)return;clearInterval(timer);state.lives=Math.min(5,state.lives+1);saveLives();btn.disabled=false;setTimeout(()=>{btn.innerHTML='<span>▶</span> 观看广告 · +1命';closeSheets(false);const level=state.pendingLevel;state.pendingLevel=null;if(level)launchLevel(level)},500)},650)};$('#pauseHomeBtn').onclick=goHome;function updateSound(value){state.sound=value;syncSettingToggles();savePrefs()}function updateHaptic(value){state.haptic=value;syncSettingToggles();savePrefs()}$('#soundToggle').onchange=e=>updateSound(e.target.checked);$('#gameSoundToggle').onchange=e=>updateSound(e.target.checked);$('#hapticToggle').onchange=e=>updateHaptic(e.target.checked);$('#gameHapticToggle').onchange=e=>updateHaptic(e.target.checked);window.addEventListener('resize',()=>{if($('#game').classList.contains('is-active'))render()});document.addEventListener('visibilitychange',()=>document.hidden?stopTimer():($('#game').classList.contains('is-active')&&startTimer()));
 $('#googleLogoutBtn').onclick=()=>{state.cloudLinked=false;localStorage.removeItem('mahjong-google-linked');updateCloudUI()};
 $$('.energy-add').forEach(btn=>btn.onclick=()=>{if(state.lives>=5)return;updateLivesUI();openSheet('energyAdSheet')});
 $('#watchEnergyAdBtn').onclick=()=>{const btn=$('#watchEnergyAdBtn');if(btn.disabled||state.lives>=5)return;btn.disabled=true;let n=3;btn.textContent=`广告播放中 · ${n}`;const timer=setInterval(()=>{n--;btn.textContent=n?`广告播放中 · ${n}`:'领取成功 · +1体力';if(n)return;clearInterval(timer);state.lives=Math.min(5,state.lives+1);saveLives();btn.disabled=false;setTimeout(()=>{btn.textContent='观看广告 · +1体力';closeSheets()},450)},650)};
 $('#watchAdBtn').onclick=()=>{const btn=$('#watchAdBtn');if(btn.disabled)return;btn.disabled=true;let n=3;btn.textContent=`广告播放中 · ${n}`;const timer=setInterval(()=>{n--;btn.textContent=n?`广告播放中 · ${n}`:'领取成功 · +1体力';if(n)return;clearInterval(timer);state.lives=Math.min(5,state.lives+1);saveLives();btn.disabled=false;setTimeout(()=>{btn.innerHTML='<span>▶</span> 观看广告 · +1体力';closeSheets(false);const level=state.pendingLevel;state.pendingLevel=null;if(level)launchLevel(level)},500)},650)};
-$('#watchToolAdBtn').onclick=()=>{const btn=$('#watchToolAdBtn');if(btn.disabled)return;btn.disabled=true;let n=3;btn.textContent=`广告播放中 · ${n}`;const timer=setInterval(()=>{n--;btn.textContent=n?`广告播放中 · ${n}`:'领取成功 · +1次';if(n)return;clearInterval(timer);if(state.pendingTool==='hint')state.hintUses++;if(state.pendingTool==='shuffle')state.shuffleUses++;state.pendingTool=null;updateToolUses();btn.disabled=false;setTimeout(()=>{btn.textContent='观看广告 · +1次';closeSheets()},450)},650)};
+$('#watchToolAdBtn').onclick=()=>{const btn=$('#watchToolAdBtn');if(btn.disabled)return;btn.disabled=true;let n=3;btn.textContent=`广告播放中 · ${n}`;const timer=setInterval(()=>{n--;btn.textContent=n?`广告播放中 · ${n}`:'领取成功 · +1次';if(n)return;clearInterval(timer);if(state.pendingTool)state.tools[state.pendingTool]=(state.tools[state.pendingTool]||0)+1;state.pendingTool=null;updateToolUses();btn.disabled=false;setTimeout(()=>{btn.textContent='观看广告 · +1次';closeSheets()},450)},650)};
 $$('.energy-add').forEach(btn=>btn.onclick=()=>{updateLivesUI();openSheet('energyAdSheet')});
 $('#watchEnergyAdBtn').onclick=()=>{const btn=$('#watchEnergyAdBtn');if(btn.disabled)return;btn.disabled=true;let n=3;btn.textContent=`广告播放中 · ${n}`;const timer=setInterval(()=>{n--;btn.textContent=n?`广告播放中 · ${n}`:'领取成功 · +1体力';if(n)return;clearInterval(timer);state.lives++;saveLives();btn.disabled=false;setTimeout(()=>{btn.textContent='观看广告 · +1体力';closeSheets()},450)},650)};
 $('#checkinBtn').onclick=openCheckin;$('#claimCheckinBtn').onclick=()=>{const today=todayKey();if(state.checkinHistory.includes(today))return;const day=new Date().getDay(),reward=day===0||day===6?2:1;state.checkinHistory.push(today);localStorage.setItem('mahjong-checkins',JSON.stringify(state.checkinHistory));state.lives+=reward;saveLives();renderCheckin();$('#claimCheckinBtn').textContent=`签到成功 · +${reward}体力`;setTimeout(()=>closeSheets(),700)};
@@ -203,3 +475,6 @@ $('#googleLogoutBtn').onclick=()=>{$('#soundSheet').classList.remove('show');ope
 function syncCheckinShortcut(){const btn=$('#checkinBtn'),status=$('#checkinStatus'),signed=state.checkinHistory.includes(todayKey());btn.classList.toggle('signed',signed);const label=signed?'已签到':'未签到';if(status.textContent!==label)status.textContent=label;btn.setAttribute('aria-label',signed?'今日已签到':'每日签到')}
 new MutationObserver(syncCheckinShortcut).observe($('#checkinStatus'),{childList:true,subtree:true});
 loadPrefs();loadPlayerProfile();renderJourney();updateCloudUI();syncCheckinShortcut();if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+
+function updateMotion(value){state.motion=value;if(!value)state.tiles.forEach(t=>t.motion=null);syncSettingToggles();savePrefs();if(state.started||state.tiles.length)render();}
+['motionToggle','gameMotionToggle'].forEach(id=>$('#'+id).onchange=e=>updateMotion(e.target.checked));
