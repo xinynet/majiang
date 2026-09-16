@@ -1,0 +1,55 @@
+{
+  "gameTitle": "趣味麻将碰",
+  "announcement": "凑齐三张相同麻将即可消除！合理使用下方4大道具助力通关！",
+  "roundSeconds": 600,
+  "adRewardCount": 1,
+  "initialTools": {
+    "clear": 1,
+    "shuffle": 1,
+    "undo": 1,
+    "magnet": 1
+  },
+  "levels": [
+    {
+      "level": 1,
+      "tiles": 30,
+      "types": 8,
+      "time": 600,
+      "desc": "新手初试"
+    },
+    {
+      "level": 2,
+      "tiles": 105,
+      "types": 22,
+      "time": 600,
+      "desc": "渐入佳境"
+    },
+    {
+      "level": 3,
+      "tiles": 120,
+      "types": 26,
+      "time": 600,
+      "desc": "层峦叠嶂"
+    },
+    {
+      "level": 4,
+      "tiles": 135,
+      "types": 30,
+      "time": 600,
+      "desc": "牌海遨游"
+    },
+    {
+      "level": 5,
+      "tiles": 150,
+      "types": 34,
+      "time": 600,
+      "desc": "大师对决"
+    }
+  ],
+  "gmMode": false,
+  "allowRevive": true,
+  "reviveReward": {
+    "clearTray": 3,
+    "addSeconds": 120
+  }
+}

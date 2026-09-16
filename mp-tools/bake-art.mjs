@@ -1,9 +1,11 @@
 /* Original artwork for the tool buttons and the meadow header.
- *
- * These are drawn here rather than copied from the reference game, in the same
- * flat-cartoon style: saturated fills, a darker outline of the same hue, and one
- * soft highlight. Authoring them as SVG keeps them editable; they ship as PNG
- * because WXML cannot render SVG.
+ * Generated matching the reference screenshot:
+ * - Meadow: bright green grassy hills with scattered flowers + blue-and-white gingham ribbon at the bottom
+ * - Tool Icons:
+ *   1. Clear (消除): Yellow glowing lightbulb with cyan screw base
+ *   2. Shuffle (洗牌): Two overlapping red cards with circular gold recycle arrows
+ *   3. Undo (翻牌): Red book/card with curved gold jumping arrow
+ *   4. Magnet (磁铁): 3D red horseshoe magnet with gold pole tips
  */
 import sharp from 'sharp';
 import fs from 'fs';
@@ -13,72 +15,214 @@ const OUT = 'C:/mydev/majiang/mp-tools/static-out';
 fs.mkdirSync(path.join(OUT, 'icons'), { recursive: true });
 fs.mkdirSync(path.join(OUT, 'bg'), { recursive: true });
 
-const wrap = body => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${body}</svg>`;
+const wrap = body => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">${body}</svg>`;
 
-/* Full-colour tool icons: they sit straight on the button, with no coloured
- * plate behind them, so each needs its own silhouette to read at 26px. */
 const TOOLS = {
-  // Light bulb: the "clear a triple for me" hint.
+  // 1. 消除 (Lightbulb): glowing golden-yellow bulb with cyan/blue base
   'tool-clear': wrap(`
-    <path d="M32 6c10 0 17.5 7.4 17.5 17 0 6.3-3.3 10.4-6.2 13.6-1.9 2.1-3.3 3.7-3.6 6.4H24.3c-.3-2.7-1.7-4.3-3.6-6.4-2.9-3.2-6.2-7.3-6.2-13.6C14.5 13.4 22 6 32 6Z"
-          fill="#ffd34e" stroke="#c98a10" stroke-width="3.2" stroke-linejoin="round"/>
-    <path d="M25 14.5c-3.4 2.2-5.4 5.6-5.6 9.6" fill="none" stroke="#fff3bf" stroke-width="3.6" stroke-linecap="round"/>
-    <rect x="23.5" y="45" width="17" height="6" rx="3" fill="#cfd4d8" stroke="#8d969d" stroke-width="2.6"/>
-    <rect x="25.5" y="52" width="13" height="6" rx="3" fill="#b9c0c6" stroke="#8d969d" stroke-width="2.6"/>
+    <defs>
+      <linearGradient id="bulbGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#fff59d"/>
+        <stop offset="40%" stop-color="#ffeb3b"/>
+        <stop offset="100%" stop-color="#f57f17"/>
+      </linearGradient>
+      <linearGradient id="baseGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#29b6f6"/>
+        <stop offset="50%" stop-color="#4fc3f7"/>
+        <stop offset="100%" stop-color="#0288d1"/>
+      </linearGradient>
+    </defs>
+    <!-- Bulb Glass Body -->
+    <path d="M32 7 C21.5 7 13.5 15 13.5 25.5 C13.5 32 17 36.5 20.5 40.5 C22.5 42.8 24 45.5 24.5 48.5 L39.5 48.5 C40 45.5 41.5 42.8 43.5 40.5 C47 36.5 50.5 32 50.5 25.5 C50.5 15 42.5 7 32 7 Z"
+          fill="url(#bulbGrad)" stroke="#c67d0a" stroke-width="2.8" stroke-linejoin="round"/>
+    <!-- Specular highlight -->
+    <path d="M22 15 C17 19 17 26 19 31" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="27" cy="13" r="2" fill="#ffffff" opacity="0.85"/>
+    <!-- Blue Screw Base -->
+    <rect x="23.5" y="48.5" width="17" height="4" rx="2" fill="url(#baseGrad)" stroke="#0277bd" stroke-width="1.8"/>
+    <rect x="25" y="52.5" width="14" height="4" rx="2" fill="url(#baseGrad)" stroke="#0277bd" stroke-width="1.8"/>
+    <rect x="27.5" y="56.5" width="9" height="3" rx="1.5" fill="#78909c" stroke="#455a64" stroke-width="1.5"/>
   `),
-  // A card flicking over, for the reshuffle.
+
+  // 2. 洗牌 (Shuffle): Two reddish cards with circular gold recycle arrows
   'tool-shuffle': wrap(`
-    <rect x="12" y="10" width="30" height="42" rx="6" transform="rotate(-13 27 31)"
-          fill="#ffe0d2" stroke="#c0442a" stroke-width="3"/>
-    <rect x="22" y="12" width="30" height="42" rx="6" transform="rotate(11 37 33)"
-          fill="#f25d3d" stroke="#a8341d" stroke-width="3"/>
-    <path d="M40 20.5 30.5 35h7L34 47l11-15h-7Z" fill="#ffd34e" stroke="#c98a10" stroke-width="2.4" stroke-linejoin="round"/>
+    <defs>
+      <linearGradient id="cardGrad1" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#d32f2f"/>
+        <stop offset="100%" stop-color="#9a0007"/>
+      </linearGradient>
+      <linearGradient id="cardGrad2" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#e53935"/>
+        <stop offset="100%" stop-color="#b71c1c"/>
+      </linearGradient>
+      <linearGradient id="arrowGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#fff176"/>
+        <stop offset="50%" stop-color="#ffb300"/>
+        <stop offset="100%" stop-color="#fb8c00"/>
+      </linearGradient>
+    </defs>
+    <!-- Back card -->
+    <rect x="8" y="12" width="28" height="38" rx="4.5" transform="rotate(-15 22 31)"
+          fill="url(#cardGrad1)" stroke="#5f0907" stroke-width="2.4"/>
+    <rect x="10.5" y="14.5" width="23" height="33" rx="3" transform="rotate(-15 22 31)"
+          fill="none" stroke="#ff867c" stroke-width="1.2" opacity="0.6"/>
+    <!-- Front card -->
+    <rect x="26" y="12" width="28" height="38" rx="4.5" transform="rotate(10 40 31)"
+          fill="url(#cardGrad2)" stroke="#5f0907" stroke-width="2.4"/>
+    <rect x="28.5" y="14.5" width="23" height="33" rx="3" transform="rotate(10 40 31)"
+          fill="none" stroke="#ff867c" stroke-width="1.2" opacity="0.6"/>
+    <!-- Recycle Arrows in Center -->
+    <g transform="translate(31, 31) scale(0.92)">
+      <!-- Top curved arrow -->
+      <path d="M -13 0 A 13 13 0 0 1 10 -8" fill="none" stroke="url(#arrowGrad)" stroke-width="6.5" stroke-linecap="round"/>
+      <path d="M 5 -15 L 15 -7 L 7 -1 Z" fill="#ffb300" stroke="#b26a00" stroke-width="1.5" stroke-linejoin="round"/>
+      <!-- Bottom curved arrow -->
+      <path d="M 13 0 A 13 13 0 0 1 -10 8" fill="none" stroke="url(#arrowGrad)" stroke-width="6.5" stroke-linecap="round"/>
+      <path d="M -5 15 L -15 7 L -7 1 Z" fill="#ffb300" stroke="#b26a00" stroke-width="1.5" stroke-linejoin="round"/>
+    </g>
   `),
-  // A tile coming back out of the tray.
+
+  // 3. 翻牌 (Undo / Flip): Red card with curved golden jumping arrow
   'tool-undo': wrap(`
-    <path d="M14 46c0-14.4 11-25 25.5-25H50" fill="none" stroke="#ef8c1c" stroke-width="7.5" stroke-linecap="round"/>
-    <path d="m40 9 12 12-12 12" fill="none" stroke="#ef8c1c" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M17 44c.6-9.4 6.2-16.6 14.4-20" fill="none" stroke="#ffc978" stroke-width="3.2" stroke-linecap="round"/>
+    <defs>
+      <linearGradient id="bookGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#e53935"/>
+        <stop offset="100%" stop-color="#b71c1c"/>
+      </linearGradient>
+      <linearGradient id="flipArrow" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#fff59d"/>
+        <stop offset="40%" stop-color="#ffca28"/>
+        <stop offset="100%" stop-color="#f57c00"/>
+      </linearGradient>
+    </defs>
+    <!-- Standing Card/Tile -->
+    <rect x="18" y="11" width="34" height="42" rx="5" fill="url(#bookGrad)" stroke="#5f0907" stroke-width="2.6"/>
+    <rect x="21" y="14" width="28" height="36" rx="3.5" fill="none" stroke="#ff8a80" stroke-width="1.2" opacity="0.7"/>
+    <!-- Tile spine line on left -->
+    <line x1="24" y1="12" x2="24" y2="52" stroke="#49120e" stroke-width="2.2"/>
+    <line x1="25" y1="12" x2="25" y2="52" stroke="#ffcdd2" stroke-width="1" opacity="0.6"/>
+    <!-- Curved Jumping Arrow looping out -->
+    <path d="M 10 39 C 9 24, 20 18, 38 19" fill="none" stroke="url(#flipArrow)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M 10 39 C 9 24, 20 18, 38 19" fill="none" stroke="#8c4700" stroke-width="8" stroke-linecap="round" stroke-opacity="0.25"/>
+    <path d="M 33 11 L 49 20 L 33 30 Z" fill="#ffca28" stroke="#b26a00" stroke-width="2" stroke-linejoin="round"/>
   `),
-  // Horseshoe magnet pulling the matching tiles in.
+
+  // 4. 磁铁 (Magnet): 3D red horseshoe with golden yellow pole tips
   'tool-magnet': wrap(`
-    <path d="M15 47V29a17 17 0 0 1 34 0v18" fill="none" stroke="#e23b4d" stroke-width="12" stroke-linecap="butt"/>
-    <path d="M20 30a12 12 0 0 1 24 0" fill="none" stroke="#ff8f9b" stroke-width="3.4" stroke-linecap="round"/>
-    <rect x="9" y="45" width="12" height="11" rx="2" fill="#dfe4e8" stroke="#95a0a8" stroke-width="2.6"/>
-    <rect x="43" y="45" width="12" height="11" rx="2" fill="#dfe4e8" stroke="#95a0a8" stroke-width="2.6"/>
+    <defs>
+      <linearGradient id="magnetRed" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#ff4d4d"/>
+        <stop offset="60%" stop-color="#d32f2f"/>
+        <stop offset="100%" stop-color="#8a0000"/>
+      </linearGradient>
+      <linearGradient id="goldTip" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#fff59d"/>
+        <stop offset="50%" stop-color="#ffca28"/>
+        <stop offset="100%" stop-color="#f57c00"/>
+      </linearGradient>
+    </defs>
+    <!-- Horseshoe body matching reference screenshot -->
+    <g transform="translate(32, 33) rotate(250)">
+      <!-- Main red curved horseshoe (thick horseshoe arc) -->
+      <path d="M -16 10 C -26 -2, -18 -18, -4 -22 C 10 -26, 22 -16, 20 -4"
+            fill="none" stroke="url(#magnetRed)" stroke-width="13" stroke-linecap="butt"/>
+      <!-- Outer shine highlight -->
+      <path d="M -15 8 C -23 -3, -16 -16, -3 -19 C 8 -22, 18 -14, 18 -4"
+            fill="none" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" opacity="0.8"/>
+      <!-- Inner rim shadow -->
+      <path d="M -11 12 C -17 3, -12 -9, -3 -12 C 5 -15, 12 -9, 13 -3"
+            fill="none" stroke="#600000" stroke-width="1.8" opacity="0.45"/>
+      <!-- Bottom-left Pole Tip (Yellow block) -->
+      <path d="M -19 4 L -9 9 L -13 21 L -23 16 Z"
+            fill="url(#goldTip)" stroke="#8f4f00" stroke-width="1.8" stroke-linejoin="round"/>
+      <!-- Top-right Pole Tip (Yellow block) -->
+      <path d="M 14 -7 L 23 -1 L 18 10 L 9 4 Z"
+            fill="url(#goldTip)" stroke="#8f4f00" stroke-width="1.8" stroke-linejoin="round"/>
+    </g>
   `),
 };
 
 for (const [name, svg] of Object.entries(TOOLS)) {
-  await sharp(Buffer.from(svg), { density: 384 }).resize(96, 96)
+  await sharp(Buffer.from(svg), { density: 384 }).resize(128, 128)
     .png({ compressionLevel: 9 }).toFile(path.join(OUT, 'icons', name + '.png'));
 }
 
-/* The meadow strip behind the HUD: hedge along the very top, then sky with
- * clouds, closed off by the picket band that separates it from the table. */
-const W = 750, H = 220;
-const cloud = (x, y, s, o) => `<g transform="translate(${x} ${y}) scale(${s})" fill="#ffffff" opacity="${o}">
-  <ellipse cx="0" cy="0" rx="46" ry="21"/><ellipse cx="-30" cy="6" rx="30" ry="15"/>
-  <ellipse cx="28" cy="7" rx="26" ry="14"/><ellipse cx="-6" cy="-14" rx="26" ry="16"/></g>`;
-const bush = (x, r) => `<circle cx="${x}" cy="${34 + (x % 37) / 4}" r="${r}" fill="#3f8f4e"/>`;
-const flower = (x, y) => `<circle cx="${x}" cy="${y}" r="3.4" fill="#ffffff" opacity=".92"/>`;
+/* Meadow Header Graphic:
+ * Exact match to user reference screenshot:
+ * 1. Grassy hill skyline with flowers and dark green tree mounds
+ * 2. Blue & white checkered gingham ribbon across bottom
+ */
+const W = 750, H = 240;
 
-let bushes = '', flowers = '';
-for (let x = -20; x < W + 40; x += 34) bushes += bush(x, 30 + (x % 53) / 3);
-for (let i = 0; i < 26; i++) flowers += flower((i * 71) % W, 16 + ((i * 37) % 34));
+// Blue Checkered Ribbon Gingham Pattern
+const checkSize = 25;
+let ginghamSquares = '';
+const cols = Math.ceil(W / checkSize) + 1;
+const rows = 3; // 75px height / 25
+for (let r = 0; r < rows; r++) {
+  for (let c = 0; c < cols; c++) {
+    const isDark = (r + c) % 2 === 0;
+    const fill = isDark ? '#7ab2ea' : '#c3defa';
+    ginghamSquares += `<rect x="${c * checkSize}" y="${r * checkSize}" width="${checkSize}" height="${checkSize}" fill="${fill}"/>`;
+  }
+}
+
+// Scattered 4-petal flowers
+const flowerCoords = [
+  [45, 38], [115, 72], [185, 28], [260, 78], [325, 42],
+  [405, 68], [480, 32], [545, 72], [625, 38], [695, 68],
+  [80, 105], [235, 115], [375, 108], [515, 118], [660, 105]
+];
+let flowers = '';
+for (const [fx, fy] of flowerCoords) {
+  flowers += `
+    <g transform="translate(${fx}, ${fy}) scale(0.95)">
+      <circle cx="-5" cy="0" r="4.8" fill="#eaf7d6" opacity="0.95"/>
+      <circle cx="5" cy="0" r="4.8" fill="#eaf7d6" opacity="0.95"/>
+      <circle cx="0" cy="-5" r="4.8" fill="#eaf7d6" opacity="0.95"/>
+      <circle cx="0" cy="5" r="4.8" fill="#eaf7d6" opacity="0.95"/>
+      <circle cx="0" cy="0" r="3.2" fill="#ffd54f"/>
+    </g>
+  `;
+}
 
 const meadow = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
-  <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0" stop-color="#c3e79c"/><stop offset=".62" stop-color="#a8db8b"/>
-    <stop offset="1" stop-color="#8ccb8c"/></linearGradient></defs>
-  <rect width="${W}" height="${H}" fill="url(#sky)"/>
-  ${cloud(160, 138, .95, .5)}${cloud(530, 112, .8, .42)}${cloud(350, 178, .62, .3)}
-  <g>${bushes}</g>
-  <g>${flowers}</g>
-  <rect y="0" width="${W}" height="10" fill="#347c42"/>
+  <defs>
+    <linearGradient id="grassGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#80cb3a"/>
+      <stop offset="50%" stop-color="#8fd746"/>
+      <stop offset="100%" stop-color="#9ada4f"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Grassy Field Background -->
+  <rect width="${W}" height="165" fill="url(#grassGrad)"/>
+
+  <!-- Rolling Bush Mound Silhouettes (matching screenshot) -->
+  <circle cx="20" cy="155" r="62" fill="#4b992b"/>
+  <circle cx="85" cy="165" r="54" fill="#58a834"/>
+  <circle cx="660" cy="155" r="68" fill="#469327"/>
+  <circle cx="730" cy="145" r="60" fill="#52a130"/>
+  <path d="M 120 165 Q 240 100 380 155 Q 520 100 640 165 Z" fill="#62b53b" opacity="0.85"/>
+
+  <!-- Small Flowers -->
+  ${flowers}
+
+  <!-- Blue & White Checkered Tablecloth Awning (Ribbon) -->
+  <g transform="translate(0, 165)">
+    <!-- Checkered grid -->
+    <g>${ginghamSquares}</g>
+    <!-- Gingham overlay shading for fabric depth -->
+    <rect width="${W}" height="75" fill="#4a90e2" opacity="0.16"/>
+    <!-- Top crisp white highlight edge -->
+    <line x1="0" y1="0" x2="${W}" y2="0" stroke="#ffffff" stroke-width="3" opacity="0.9"/>
+    <!-- Bottom cyan/blue border line -->
+    <line x1="0" y1="75" x2="${W}" y2="75" stroke="#4887cb" stroke-width="3"/>
+  </g>
 </svg>`;
 
 await sharp(Buffer.from(meadow), { density: 144 })
-  .png({ compressionLevel: 9, palette: true }).toFile(path.join(OUT, 'bg', 'meadow.png'));
+  .png({ compressionLevel: 9 }).toFile(path.join(OUT, 'bg', 'meadow.png'));
 
-console.log(`baked ${Object.keys(TOOLS).length} tool icons + meadow header -> ${OUT}`);
+console.log(`Successfully baked ${Object.keys(TOOLS).length} tool icons + meadow header into ${OUT}`);
+

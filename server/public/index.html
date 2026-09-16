@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>趣味麻将碰 - 运营管理后台</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #10b981;
+      --primary-dark: #059669;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+    .sidebar { width: 250px; background: #0f172a; color: #fff; padding: 24px 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+    .logo { font-size: 20px; font-weight: 800; color: #34d399; margin-bottom: 28px; display: flex; align-items: center; gap: 10px; padding: 0 8px; }
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px; color: #94a3b8; text-decoration: none; cursor: pointer; font-size: 14px; font-weight: 500; }
+    .nav-item:hover, .nav-item.active { background: #1e293b; color: #34d399; }
+    .main { flex: 1; padding: 32px; overflow-y: auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+    .header h1 { font-size: 24px; font-weight: 800; }
+    .btn { padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 8px; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-outline { background: #fff; border: 1px solid var(--border); color: var(--text); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 28px; }
+    .stat-card { background: var(--card); padding: 20px; border-radius: 12px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 16px; border: 1px solid var(--border); }
+    .stat-icon { width: 48px; height: 48px; border-radius: 10px; display: grid; place-items: center; font-size: 22px; }
+    .stat-val { font-size: 24px; font-weight: 700; }
+    .stat-lbl { font-size: 13px; color: var(--muted); }
+    .card { background: var(--card); border-radius: 12px; box-shadow: var(--shadow); padding: 24px; margin-bottom: 24px; border: 1px solid var(--border); }
+    .card-title { font-size: 17px; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 13px; font-weight: 600; color: #334155; }
+    .form-group input, .form-group textarea, .form-group select { padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; }
+    .form-tip { font-size: 12px; color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th { text-align: left; padding: 12px 14px; background: #f8fafc; font-size: 13px; font-weight: 600; color: #475569; border-bottom: 1px solid var(--border); }
+    td { padding: 12px 14px; font-size: 14px; border-bottom: 1px solid var(--border); }
+    #toast { position: fixed; bottom: 24px; right: 24px; background: #0f172a; color: #fff; padding: 12px 20px; border-radius: 8px; box-shadow: var(--shadow); display: none; align-items: center; gap: 10px; z-index: 999; }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo"><i class="fa-solid fa-gamepad"></i> 趣味麻将碰</div>
+    <a class="nav-item active"><i class="fa-solid fa-sliders"></i> 全局配置管理</a>
+    <a class="nav-item"><i class="fa-solid fa-layer-group"></i> 关卡难度配置</a>
+    <a class="nav-item"><i class="fa-solid fa-wand-magic-sparkles"></i> 道具经济配置</a>
+    <a class="nav-item"><i class="fa-solid fa-chart-line"></i> 实时运营概览</a>
+    <a class="nav-item" href="/game/#/" target="_blank" style="margin-top: auto; background: rgba(52, 211, 153, 0.1); color: #34d399;"><i class="fa-solid fa-play"></i> 试玩游戏前台</a>
+  </div>
+  <div class="main">
+    <div class="header">
+      <div>
+        <h1>趣味麻将碰 · 运营后台</h1>
+        <p style="color: var(--muted); font-size: 13px; margin-top: 4px;">配置游戏参数、关卡规则、道具赠送与实时统计</p>
+      </div>
+      <div style="display: flex; gap: 12px;">
+        <button class="btn btn-outline" onclick="resetConfig()"><i class="fa-solid fa-rotate-left"></i> 恢复默认</button>
+        <button class="btn btn-primary" onclick="saveConfig()"><i class="fa-solid fa-floppy-disk"></i> 保存并生效</button>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #ecfdf5; color: #10b981;"><i class="fa-solid fa-gamepad"></i></div>
+        <div>
+          <div class="stat-val" id="st-games">0</div>
+          <div class="stat-lbl">总对局场次</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #eff6ff; color: #3b82f6;"><i class="fa-solid fa-trophy"></i></div>
+        <div>
+          <div class="stat-val" id="st-wins">0</div>
+          <div class="stat-lbl">累计通关场次</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #fef2f2; color: #ef4444;"><i class="fa-solid fa-tv"></i></div>
+        <div>
+          <div class="stat-val" id="st-ads">0</div>
+          <div class="stat-lbl">激励视频播放量</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #fdf4ff; color: #a855f7;"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+        <div>
+          <div class="stat-val" id="st-tools">0</div>
+          <div class="stat-lbl">道具消耗总量</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span><i class="fa-solid fa-gear"></i> 基础运营参数</span></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>游戏名称</label>
+          <input type="text" id="cfg-gameTitle">
+        </div>
+        <div class="form-group">
+          <label>单局游戏时间 (秒)</label>
+          <input type="number" id="cfg-roundSeconds">
+        </div>
+        <div class="form-group">
+          <label>看视频广告奖励倍数</label>
+          <input type="number" id="cfg-adRewardCount">
+        </div>
+        <div class="form-group">
+          <label>开发者 GM 模式</label>
+          <select id="cfg-gmMode">
+            <option value="false">关闭 (正式运营)</option>
+            <option value="true">开启 (一键消除/无限体力)</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label>大厅公告</label>
+          <input type="text" id="cfg-announcement">
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span><i class="fa-solid fa-layer-group"></i> 关卡难度梯度配置</span></div>
+      <table>
+        <thead>
+          <tr>
+            <th>关卡序号</th>
+            <th>麻将总张数 (3的倍数)</th>
+            <th>麻将种类数</th>
+            <th>通关限时 (秒)</th>
+            <th>关卡描述</th>
+          </tr>
+        </thead>
+        <tbody id="levels-tbody"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title"><span><i class="fa-solid fa-coins"></i> 初始道具赠送配置</span></div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>移出消除 (Clear)</label>
+          <input type="number" id="cfg-tool-clear">
+        </div>
+        <div class="form-group">
+          <label>重新洗牌 (Shuffle)</label>
+          <input type="number" id="cfg-tool-shuffle">
+        </div>
+        <div class="form-group">
+          <label>翻牌撤回 (Undo)</label>
+          <input type="number" id="cfg-tool-undo">
+        </div>
+        <div class="form-group">
+          <label>强力磁铁 (Magnet)</label>
+          <input type="number" id="cfg-tool-magnet">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="toast"><i class="fa-solid fa-circle-check" style="color: #34d399;"></i> <span id="toast-msg">配置已更新</span></div>
+  <script>
+    let currentConfig = null;
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      document.getElementById("toast-msg").innerText = msg;
+      toast.style.display = "flex";
+      setTimeout(() => { toast.style.display = "none"; }, 2500);
+    }
+    async function loadStats() {
+      try {
+        const res = await fetch("/api/stats");
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          const d = json.data;
+          document.getElementById("st-games").innerText = d.totalGames || 0;
+          document.getElementById("st-wins").innerText = d.totalWins || 0;
+          document.getElementById("st-ads").innerText = d.totalAds || 0;
+          const tu = d.toolUsage || {};
+          const sumTools = (tu.clear || 0) + (tu.shuffle || 0) + (tu.undo || 0) + (tu.magnet || 0);
+          document.getElementById("st-tools").innerText = sumTools;
+        }
+      } catch (e) {}
+    }
+    async function loadConfig() {
+      try {
+        const res = await fetch("/api/config");
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          currentConfig = json.data;
+          renderConfig(currentConfig);
+        }
+      } catch (e) {
+        showToast("读取配置失败: " + e.message);
+      }
+    }
+    function renderConfig(cfg) {
+      document.getElementById("cfg-gameTitle").value = cfg.gameTitle || "";
+      document.getElementById("cfg-roundSeconds").value = cfg.roundSeconds || 600;
+      document.getElementById("cfg-adRewardCount").value = cfg.adRewardCount || 1;
+      document.getElementById("cfg-gmMode").value = String(!!cfg.gmMode);
+      document.getElementById("cfg-announcement").value = cfg.announcement || "";
+      const it = cfg.initialTools || {};
+      document.getElementById("cfg-tool-clear").value = it.clear || 1;
+      document.getElementById("cfg-tool-shuffle").value = it.shuffle || 1;
+      document.getElementById("cfg-tool-undo").value = it.undo || 1;
+      document.getElementById("cfg-tool-magnet").value = it.magnet || 1;
+      const tbody = document.getElementById("levels-tbody");
+      tbody.innerHTML = "";
+      (cfg.levels || []).forEach((lvl, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = "<td><strong>第 " + lvl.level + " 关</strong></td>" +
+          "<td><input type="number" class="lvl-tiles" value="" + lvl.tiles + "" style="width: 110px; padding: 6px;"> 张</td>" +
+          "<td><input type="number" class="lvl-types" value="" + lvl.types + "" style="width: 90px; padding: 6px;"> 种</td>" +
+          "<td><input type="number" class="lvl-time" value="" + lvl.time + "" style="width: 100px; padding: 6px;"> 秒</td>" +
+          "<td><input type="text" class="lvl-desc" value="" + (lvl.desc || "") + "" style="width: 160px; padding: 6px;"></td>";
+        tbody.appendChild(tr);
+      });
+    }
+    async function saveConfig() {
+      if (!currentConfig) return;
+      currentConfig.gameTitle = document.getElementById("cfg-gameTitle").value;
+      currentConfig.roundSeconds = Number(document.getElementById("cfg-roundSeconds").value);
+      currentConfig.adRewardCount = Number(document.getElementById("cfg-adRewardCount").value);
+      currentConfig.gmMode = document.getElementById("cfg-gmMode").value === "true";
+      currentConfig.announcement = document.getElementById("cfg-announcement").value;
+      currentConfig.initialTools = {
+        clear: Number(document.getElementById("cfg-tool-clear").value),
+        shuffle: Number(document.getElementById("cfg-tool-shuffle").value),
+        undo: Number(document.getElementById("cfg-tool-undo").value),
+        magnet: Number(document.getElementById("cfg-tool-magnet").value)
+      };
+      const tileInputs = document.querySelectorAll(".lvl-tiles");
+      const typeInputs = document.querySelectorAll(".lvl-types");
+      const timeInputs = document.querySelectorAll(".lvl-time");
+      const descInputs = document.querySelectorAll(".lvl-desc");
+      tileInputs.forEach((inp, idx) => {
+        if (currentConfig.levels[idx]) {
+          currentConfig.levels[idx].tiles = Number(inp.value);
+          currentConfig.levels[idx].types = Number(typeInputs[idx].value);
+          currentConfig.levels[idx].time = Number(timeInputs[idx].value);
+          currentConfig.levels[idx].desc = descInputs[idx].value;
+        }
+      });
+      try {
+        const res = await fetch("/api/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(currentConfig)
+        });
+        const json = await res.json();
+        if (json.code === 0) {
+          showToast("运营配置保存成功并已即时生效！");
+        } else {
+          showToast("保存失败: " + json.msg);
+        }
+      } catch (e) {
+        showToast("网络错误: " + e.message);
+      }
+    }
+    async function resetConfig() {
+      if (!confirm("确定要重置所有配置为初始默认参数吗？")) return;
+      try {
+        const res = await fetch("/api/config/reset", { method: "POST" });
+        const json = await res.json();
+        if (json.code === 0) {
+          currentConfig = json.data;
+          renderConfig(currentConfig);
+          showToast("已成功恢复系统默认配置！");
+        }
+      } catch (e) {
+        showToast("重置出错: " + e.message);
+      }
+    }
+    window.onload = () => {
+      loadStats();
+      loadConfig();
+    };
+  </script>
+</body>
+</html>

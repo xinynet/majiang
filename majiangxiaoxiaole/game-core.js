@@ -37,7 +37,11 @@ export function seeded(seed) {
   return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
 }
 
-export function tileCountForLevel(level) {
+export function tileCountForLevel(level, config) {
+  if (config && config.levels && config.levels[level - 1] && config.levels[level - 1].tiles) {
+    const t = config.levels[level - 1].tiles;
+    return Math.max(6, t - t % 3);
+  }
   const n = Math.min(120, 30 + 15 * (level - 1));
   return n - n % 3;
 }
@@ -59,8 +63,8 @@ function shuffleWith(rnd, list) {
  * is the board's width/height; the caller measures it because only the caller
  * knows what it is drawing into.
  */
-export function makeLayout(level, rnd, aspect = 0.76) {
-  const count = tileCountForLevel(level);
+export function makeLayout(level, rnd, aspect = 0.76, config) {
+  const count = tileCountForLevel(level, config);
   // The grid one layer can hold at the fixed tile size.
   const cols = Math.max(2, Math.round(TILES_ACROSS));
   const rows = Math.max(2, Math.floor((TILES_ACROSS / aspect) / 1.3636));
@@ -159,10 +163,11 @@ export function createGame({ motion, emit = () => {}, reducedMotion = false } = 
   /* Deals in triples, so every type appears a multiple of three times and the
    * level is always winnable. Types are scattered rather than grouped: any tile
    * can be tapped, so the only thing that matters is the counts. */
-  function dealTriples(rnd) {
+  function dealTriples(rnd, config) {
     const total = state.tiles.length, groupCount = Math.floor(total / 3);
     const pool = shuffleWith(rnd, SYMBOLS);
-    const cap = Math.max(5, Math.min(pool.length, Math.ceil(groupCount * .63)));
+    const customTypes = config?.levels?.[state.level - 1]?.types;
+    const cap = customTypes ? Math.min(pool.length, Math.max(3, customTypes)) : Math.max(5, Math.min(pool.length, Math.ceil(groupCount * .63)));
     const types = pool.slice(0, cap);
     const bag = [];
     for (let i = 0; i < groupCount; i++) { const t = types[i % types.length]; bag.push(t, t, t); }
@@ -206,21 +211,24 @@ export function createGame({ motion, emit = () => {}, reducedMotion = false } = 
     return active;
   }
 
-  function build(level, aspect) {
+  function build(level, aspect, customConfig = {}) {
     clearTimeout(dealTimer);
     const run = ++effectId;
+    state.config = customConfig;
+    const roundTime = customConfig?.levels?.[level - 1]?.time || customConfig?.roundSeconds || ROUND_SECONDS;
+    const toolsInit = customConfig?.initialTools ? { ...customConfig.initialTools } : { clear: 1, shuffle: 1, undo: 1, magnet: 1 };
     Object.assign(state, {
-      level, seconds: 0, remain: ROUND_SECONDS, shuffles: 0, slots: [], score: 0,
-      combo: 1, comboUntil: 0, tools: { clear: 1, shuffle: 1, undo: 1, magnet: 1 },
+      level, seconds: 0, remain: roundTime, shuffles: 0, slots: [], score: 0,
+      combo: 1, comboUntil: 0, tools: toolsInit,
       dealing: true, animating: true, over: false,
     });
     const rnd = seeded(level), rnd2 = seeded(level * 7 + 3);
-    state.tiles = makeLayout(level, rnd, aspect).map((p, i) => ({
+    state.tiles = makeLayout(level, rnd, aspect, customConfig).map((p, i) => ({
       id: i, type: '', ...p, layoutX: p.x, layoutY: p.y, layoutZ: p.z,
       rot: p.rot ?? 0, rot2: (rnd2() - .5) * 14, removed: false, inTray: false,
       stand: 0, leanOn: null, motion: null,
     }));
-    dealTriples(rnd);
+    dealTriples(rnd, customConfig);
     motion.assignLeaners(state.tiles, seeded(level * 13 + 5));
     state.initial = state.tiles.length;
     state.initialTypeCount = new Set(state.tiles.map(t => t.type)).size;
@@ -337,12 +345,27 @@ export function createGame({ motion, emit = () => {}, reducedMotion = false } = 
 
   function useTool(name) {
     if (state.animating || state.over || state.dealing) return false;
-    if ((state.tools[name] || 0) <= 0) { emit('needTool', { tool: name, label: TOOL_LABEL[name] || '道具' }); return false; }
+    const isGm = !!state.config?.gmMode;
+    if (!isGm && (state.tools[name] || 0) <= 0) { emit('needTool', { tool: name, label: TOOL_LABEL[name] || '道具' }); return false; }
     if (!TOOLS[name] || TOOLS[name]() === false) return false;
-    state.tools[name]--;
+    if (!isGm) state.tools[name]--;
     emit('haptic', [8, 20, 8]);
     changed();
     return true;
+  }
+
+  function revive() {
+    state.over = false;
+    if (state.slots.length >= SLOTS) {
+      const removed = state.slots.splice(0, Math.min(3, state.slots.length));
+      removed.forEach(t => { t.inTray = false; });
+      settle();
+    }
+    if (state.remain <= 0) {
+      state.remain = 120;
+    }
+    changed();
+    emit('board');
   }
 
   /* One second of clock. Returns false once time is up. */
@@ -352,7 +375,7 @@ export function createGame({ motion, emit = () => {}, reducedMotion = false } = 
     state.remain--;
     if (state.remain > 0) return true;
     state.remain = 0; state.over = true;
-    emit('lost', { title: '时间到', desc: '这一局的 10 分钟用完了。' });
+    emit('lost', { title: '时间到', desc: '本局时间已用尽。' });
     return false;
   }
 
@@ -360,5 +383,5 @@ export function createGame({ motion, emit = () => {}, reducedMotion = false } = 
 
   function destroy() { clearTimeout(dealTimer); effectId++; }
 
-  return { state, build, pick, useTool, tick, settle, stepMotion, stars, destroy, live, liveCount: () => live().length };
+  return { state, build, pick, useTool, revive, tick, settle, stepMotion, stars, destroy, live, liveCount: () => live().length };
 }
