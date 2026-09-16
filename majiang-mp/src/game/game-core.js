@@ -48,6 +48,17 @@ export function tileCountForLevel(level, config) {
 
 export const SLOTS = 7;
 export const ROUND_SECONDS = 600;
+/* How long the deal takes. The last tile leaves the stack at DEAL_STAGGER and
+ * then has to fall, tip over and stop bouncing; the leaning tiles rotate down
+ * slowly enough that they, not the stagger, set the tail. Measured across
+ * levels 1-20 the pile is at rest by 1.87s, so DEAL_DURATION - when the board
+ * unlocks, the clock starts and the hands withdraw - sits just past that, and
+ * the whole deal still lands inside two seconds. Past that the wait before
+ * play starts to drag. Re-measure with the Node regression in the
+ * animation-tuning skill after changing any of these three. */
+const DEAL_STAGGER = 450, DEAL_DURATION = 1900;
+// Drop height in tile units. Lower means a quicker fall: gravity is 9/s².
+const DEAL_HEIGHT = 1.6;
 const TOOL_LABEL = { clear: '消除', shuffle: '洗牌', undo: '翻牌', magnet: '磁铁' };
 
 function shuffleWith(rnd, list) {
@@ -198,17 +209,41 @@ export function createGame({ motion, emit = () => {}, reducedMotion = false } = 
   }
 
   /* Advances every falling tile. Returns true while anything is still moving,
-   * so the host knows whether to keep requesting frames. */
+   * so the host knows whether to keep requesting frames. A tile still waiting
+   * on its deal delay counts as active but isn't stepped yet, so it sits at
+   * its `from` pose until its turn comes up. */
   function stepMotion(dt) {
     let active = false;
     for (const t of state.tiles) {
       if (!t.motion || t.removed || t.inTray) continue;
+      if (t.motion.delay > 0) { t.motion.delay -= dt * 1000; active = true; continue; }
       const steps = Math.max(1, Math.ceil(dt / .016));
       let done = false;
       for (let i = 0; i < steps && !done; i++) done = motion.step(t.motion, dt / steps);
       if (done) t.motion = null; else active = true;
     }
     return active;
+  }
+
+  /* Every tile starts stacked above the board's centre and falls/slides out to
+   * its dealt spot, staggered so the pile fills in a cascade instead of
+   * popping in all at once. Reuses the same fall-and-settle physics as a tile
+   * losing its support, since a dealt tile dropping onto the table is the
+   * same motion. */
+  function dealIn(rnd) {
+    const xs = state.tiles.map(t => t.x), ys = state.tiles.map(t => t.y), zs = state.tiles.map(t => t.z);
+    const originX = (Math.min(...xs) + Math.max(...xs)) / 2, originY = (Math.min(...ys) + Math.max(...ys)) / 2;
+    const originZ = Math.max(...zs) + DEAL_HEIGHT;
+    const order = shuffleWith(rnd, state.tiles);
+    order.forEach((t, i) => {
+      const goal = { x: t.x, y: t.y, z: t.z, lean: t.stand || 0, leanOn: t.leanOn };
+      const from = { x: originX, y: originY, z: originZ, lean: 0 };
+      t.motion = {
+        from, current: { ...from }, target: goal,
+        velocity: 0, angularVelocity: 0,
+        delay: (i / order.length) * DEAL_STAGGER,
+      };
+    });
   }
 
   function build(level, aspect, customConfig = {}) {
@@ -230,11 +265,12 @@ export function createGame({ motion, emit = () => {}, reducedMotion = false } = 
     }));
     dealTriples(rnd, customConfig);
     motion.assignLeaners(state.tiles, seeded(level * 13 + 5));
+    if (state.motion) dealIn(seeded(level * 17 + 11));
     state.initial = state.tiles.length;
     state.initialTypeCount = new Set(state.tiles.map(t => t.type)).size;
     // Armed before the first emit: a throwing host handler must not leave the
     // board stuck in its dealing state forever.
-    const dealDuration = state.motion ? 3400 : 120;
+    const dealDuration = state.motion ? DEAL_DURATION : 120;
     dealTimer = setTimeout(() => {
       if (run !== effectId) return;
       state.dealing = false; state.animating = false;

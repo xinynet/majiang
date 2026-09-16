@@ -1,12 +1,6 @@
 .claude/
-
-# uni-app mini-program build
-majiang-mp/node_modules/
-majiang-mp/dist/
-majiang-mp/mp-screenshot.png
-majiang-mp/unpackage/
-
-# asset pipeline: generated/intermediate output, regenerate with mp-tools/*.mjs
-mp-tools/node_modules/
+node_modules/
+dist/
+unpackage/
 mp-tools/static-out/
-mp-tools/extracted/
+mp-tools/node_modules/

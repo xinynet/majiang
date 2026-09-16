@@ -228,26 +228,26 @@ function handleAuxAction() {
 
 /* 1. 左上角返回按钮 */
 .hotspot-back {
-  left: 2%;
-  top: 4%;
-  width: 13%;
-  height: 16%;
+  left: 2.5%;
+  top: 8%;
+  width: 10%;
+  height: 15%;
   border-radius: 50%;
 }
 
 /* 2. 视频宝箱 (右上角) */
 .hotspot-video-chest {
   right: 2%;
-  top: 10%;
+  top: 18%;
   width: 18%;
-  height: 20%;
+  height: 22%;
   border-radius: 20rpx;
 }
 
 /* 3. 兑换屋 (左下角球形按钮) */
 .hotspot-exchange {
   left: 1%;
-  bottom: 1%;
+  bottom: 2%;
   width: 17%;
   height: 25%;
   border-radius: 20rpx;
@@ -256,7 +256,7 @@ function handleAuxAction() {
 /* 4. 赛季收藏 (右下角金色五角星方块) */
 .hotspot-collection {
   right: 1%;
-  bottom: 1%;
+  bottom: 2%;
   width: 17%;
   height: 25%;
   border-radius: 20rpx;

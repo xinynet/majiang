@@ -282,21 +282,19 @@
       </view>
     </view>
 
-    <!-- 6. 宝箱开启奖励提示弹窗 -->
-    <view class="modal-overlay" v-if="modals.chestReward" @tap.self="closeChestModal">
-      <view class="reward-dialog animate-pop">
-        <view class="reward-header">🎉 宝箱已开启！</view>
-        <view class="reward-grid">
-          <view class="reward-item">
-            <text class="reward-icon-lg">🪙</text>
-            <text class="reward-name">金币 +{{ lastReward.coins }}</text>
-          </view>
-          <view class="reward-item">
-            <text class="reward-icon-lg">💡</text>
-            <text class="reward-name">消除道具 +{{ lastReward.tools }}</text>
-          </view>
+    <!-- 7. 添加桌面有礼弹窗 (完全还原 点添加桌面后的弹窗.jpg) -->
+    <view class="modal-overlay" v-if="modals.desktop" @tap.self="closeDesktopModal">
+      <view class="desktop-dialog animate-pop">
+        <!-- 弹窗主卡片 (彩虹小人+文字+奖励区+右上角关闭X) -->
+        <view class="desktop-card-wrap">
+          <image class="desktop-card-img" src="/static/ui/desktop_modal_card.png" mode="widthFix" />
+          <!-- 右上角关闭按钮热区 -->
+          <view class="desktop-close-hotspot" @tap="closeDesktopModal"></view>
         </view>
-        <button class="dialog-confirm-btn" @tap="closeChestModal">开心收下</button>
+        <!-- 下方添加桌面按钮 -->
+        <view class="desktop-btn-wrap" @tap="handleAddToDesktop">
+          <image class="desktop-btn-img" src="/static/ui/desktop_modal_btn.png" mode="widthFix" />
+        </view>
       </view>
     </view>
 
@@ -344,7 +342,8 @@ const modals = reactive({
   dailyTasks: false,
   shop: false,
   settings: false,
-  chestReward: false
+  chestReward: false,
+  desktop: false
 });
 
 const activeTaskTab = ref('daily');
@@ -406,7 +405,32 @@ function closeSettingsModal() { modals.settings = false; }
 
 function closeChestModal() { modals.chestReward = false; }
 
+function openDesktopModal() { modals.desktop = true; }
+function closeDesktopModal() { modals.desktop = false; }
+
+function handleAddToDesktop() {
+  uni.showModal({
+    title: '添加至桌面',
+    content: '请点击右上角【···】菜单，选择【添加到桌面】即可收藏游戏！\n首次通过桌面图标进入即可领取专属奖励。',
+    showCancel: false,
+    confirmText: '去添加',
+    success: () => {
+      // 模拟发放奖励
+      addCoins(200);
+      uni.showToast({ title: '金币 +200 已入账！', icon: 'success' });
+      closeDesktopModal();
+    }
+  });
+}
+
 function showStaminaTip() {
+  if (gameState.stamina >= 5) {
+    uni.showToast({
+      title: '您的体力已满',
+      icon: 'none'
+    });
+    return;
+  }
   uni.showModal({
     title: '体力说明',
     content: '当前体力: ' + gameState.stamina + '/5\n每15分钟自动恢复1点体力。是否看广告补满体力？',
@@ -424,12 +448,7 @@ function showStaminaTip() {
 }
 
 function openAddToDesktop() {
-  uni.showModal({
-    title: '添加到桌面',
-    content: '点击小程序右上角【···】选择【添加到桌面】或【添加到我的小程序】，随时随地畅玩麻将！',
-    showCancel: false,
-    confirmText: '我知道了'
-  });
+  openDesktopModal();
 }
 
 function openDailyChallenge() {
@@ -1629,4 +1648,53 @@ onMounted(() => {
 .ad-sub { font-size: 24rpx; color: #94a3b8; margin-bottom: 30rpx; }
 .ad-progress { width: 100%; height: 10rpx; background: #334155; border-radius: 5rpx; overflow: hidden; }
 .ad-progress-bar { height: 100%; background: #22c55e; }
+
+/* 7. 添加桌面有礼弹窗样式 (完全对齐 点添加桌面后的弹窗.jpg) */
+.desktop-dialog {
+  position: relative;
+  width: 620rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.desktop-card-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.desktop-card-img {
+  width: 100%;
+  display: block;
+}
+
+/* 右上角关闭热区 */
+.desktop-close-hotspot {
+  position: absolute;
+  top: 28%;
+  right: 4%;
+  width: 14%;
+  height: 12%;
+  border-radius: 50%;
+  z-index: 10;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.desktop-btn-wrap {
+  margin-top: 24rpx;
+  width: 320rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.08s ease;
+}
+
+.desktop-btn-wrap:active {
+  transform: scale(0.95);
+}
+
+.desktop-btn-img {
+  width: 100%;
+  display: block;
+}
 </style>

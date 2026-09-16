@@ -4,7 +4,7 @@
     <image class="g-meadow" src="/static/bg/meadow.png" mode="scaleToFill" />
 
     <!-- 顶部操作栏 (完全对齐 c5f9f24a490a2422db421d4e9a09ab00.jpg) -->
-    <view class="game-top-bar">
+    <view class="game-top-bar" :style="{ paddingTop: topInset + 'px' }">
       <view class="top-bar-left">
         <!-- 暂停按钮 -->
         <view class="round-pause-btn" @tap="onPause">
@@ -17,7 +17,7 @@
         </view>
       </view>
 
-      <view class="top-bar-right">
+      <view class="top-bar-right" :style="{ marginTop: timerDrop + 'px' }">
         <!-- 倒计时胶囊 -->
         <view class="timer-pill" :class="{ urgent: view.remain < 60 }">
           <text class="timer-ico">🧭</text>
@@ -41,7 +41,7 @@
 
     <!-- Canvas 3D牌阵主体区 -->
     <view class="board-wrap">
-      <canvas id="board" type="2d" class="board" @touchstart="onTouch"></canvas>
+      <canvas id="board" type="2d" class="board" :hidden="modalOpen" @touchstart="onTouch"></canvas>
       <view v-if="view.dealing" class="coach"><text class="t-p">发牌中…</text></view>
     </view>
 
@@ -140,11 +140,11 @@
     </view>
 
     <!-- 2. 暂停弹窗 -->
-    <view class="modal-overlay" v-if="paused" @tap.self="onPause">
+    <view class="modal-overlay" v-if="paused" @tap.self="resumeGame">
       <view class="pause-dialog animate-pop">
         <view class="dialog-title-big">游戏暂停</view>
         <view class="pause-btn-col">
-          <button class="menu-action-btn primary-gradient" @tap="onPause">继续游戏</button>
+          <button class="menu-action-btn primary-gradient" @tap="resumeGame">继续游戏</button>
           <button class="menu-action-btn warning-gradient" @tap="restartGame">重新开始</button>
           <button class="menu-action-btn neutral-gradient" @tap="exitToHome">返回首页</button>
         </view>
@@ -208,11 +208,12 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted, onUnmounted, getCurrentInstance } from 'vue';
+import { reactive, ref, computed, watch, nextTick, onMounted, onUnmounted, getCurrentInstance } from 'vue';
 import { TileMotion } from '../../game/tile-motion.js';
 import { createGame, boardMetrics, faceKey } from '../../game/game-core.js';
 import { createBoardRenderer } from '../../game/canvas-board.js';
 import { createEmitter, canvasHost, resolveCanvas } from '../../game/platform.js';
+import { drawShuffleHands } from '../../game/shuffle-hands.js';
 import { gameState, spendCoins, addCoins, winLevelAction } from '../../game/state.js';
 
 const instance = getCurrentInstance();
@@ -233,6 +234,7 @@ const faceSrc = tile => '/static/tiles-face/' + faceKey(tile.type) + '.png';
 let game = null, renderer = null, host = null, metrics = null;
 let boardSize = { width: 0, height: 0 };
 let running = false, clockTimer = null, lastFrame = 0;
+let handImage = null, dealStart = 0, dealLength = 1;
 const paused = ref(false);
 const isWon = ref(false);
 const isLost = ref(false);
@@ -251,6 +253,32 @@ const refillModal = reactive({
 const adActive = ref(false);
 const adCountdown = ref(3);
 let adCallback = null;
+
+/* WeChat's own capsule menu owns the top-right corner on every device, so the
+ * clock is dropped below it rather than sitting underneath it. */
+const topInset = ref(0);
+const timerDrop = ref(0);
+
+function layoutTopBar() {
+  const info = uni.getWindowInfo ? uni.getWindowInfo() : uni.getSystemInfoSync();
+  const status = info.statusBarHeight || 20;
+  topInset.value = status;
+  try {
+    const capsule = uni.getMenuButtonBoundingClientRect();
+    if (capsule && capsule.bottom) timerDrop.value = Math.max(0, capsule.bottom - status);
+  } catch (e) {
+    timerDrop.value = 36;
+  }
+}
+
+/* A mini-program canvas is a native component: it composites above every
+ * <view> whatever the z-index says, so a dialog opened over the board ends up
+ * buried under the tiles. Hiding the canvas while a dialog is up is what keeps
+ * those buttons visible and tappable. */
+const modalOpen = computed(() => paused.value || isWon.value || isLost.value || refillModal.visible || adActive.value);
+
+// Coming back from display:none, the canvas may hand back an empty bitmap.
+watch(modalOpen, open => { if (!open) nextTick(paint); });
 
 function syncView() {
   const s = game.state;
@@ -273,6 +301,11 @@ function ordered() {
 function paint() {
   if (!renderer || !game || !metrics) return;
   renderer.draw(ordered(), metrics, { ...boardSize, makeCanvas: host.makeCanvas });
+  // Painted after the pile so the hands pass over the tiles, not under them.
+  if (game.state.dealing) {
+    drawShuffleHands(host.ctx, handImage, boardSize.width, boardSize.height,
+      (Date.now() - dealStart) / dealLength);
+  }
 }
 
 function pump() {
@@ -284,7 +317,9 @@ function pump() {
     lastFrame = now;
     const active = game.stepMotion(dt);
     paint();
-    if (active) host.frame(tick); else running = false;
+    // Keep the frames coming until the hands have withdrawn, even once the
+    // last tile has come to rest.
+    if (active || game.state.dealing) host.frame(tick); else running = false;
   };
   host.frame(tick);
 }
@@ -321,8 +356,14 @@ function stopClock() {
   clockTimer = null;
 }
 
+/* Open and close are separate rather than one toggle: a tap on the dialog also
+ * bubbles to the overlay, and two toggles would leave it right back open. */
 function onPause() {
-  paused.value = !paused.value;
+  paused.value = true;
+}
+
+function resumeGame() {
+  paused.value = false;
 }
 
 function restartGame() {
@@ -438,14 +479,19 @@ function triggerAd(cb) {
 }
 
 function start(level) {
-  game.build(level, boardSize.width / boardSize.height);
+  // build() reports how long its deal takes; the clock starts when it lands,
+  // and the hands sweep across exactly that window.
+  dealStart = Date.now();
+  const dealMs = game.build(level, boardSize.width / boardSize.height);
+  dealLength = dealMs;
   metrics = boardMetrics(game.state.tiles, level, boardSize.width, boardSize.height);
   syncView();
   paint();
-  setTimeout(startClock, 3500);
+  setTimeout(startClock, dealMs + 100);
 }
 
 onMounted(async () => {
+  layoutTopBar();
   const pages = getCurrentPages();
   const cur = pages[pages.length - 1];
   const startLevel = (cur && cur.options && cur.options.level) ? parseInt(cur.options.level) : (gameState.currentLevel || 2);
@@ -467,6 +513,10 @@ onMounted(async () => {
   game.state.tools = { ...gameState.tools };
 
   const atlas = await host.loadImage('/static/tile-poses/shells.png');
+  // A missing hand must not cost us the deal, so it is loaded alongside.
+  host.loadImage('/static/hands/right-hand-long.png')
+    .then(img => { handImage = img; })
+    .catch(() => {});
   const faces = new Map(), pending = new Set();
   const faceFor = type => {
     const key = faceKey(type);
@@ -519,14 +569,15 @@ onUnmounted(() => {
   z-index: 10;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 60rpx 30rpx 10rpx;
+  align-items: flex-start;
+  padding: 0 30rpx 10rpx;
 }
 
 .top-bar-left {
   display: flex;
-  align-items: center;
-  gap: 16rpx;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10rpx;
 }
 
 .round-pause-btn {
