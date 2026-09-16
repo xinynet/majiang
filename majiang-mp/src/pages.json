@@ -1,0 +1,18 @@
+{
+  "pages": [
+    {
+      "path": "pages/game/game",
+      "style": {
+        "navigationBarTitleText": "趣味麻将碰",
+        "navigationStyle": "custom",
+        "disableScroll": true
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "趣味麻将碰",
+    "navigationBarBackgroundColor": "#F8F8F8",
+    "backgroundColor": "#dff0da"
+  }
+}

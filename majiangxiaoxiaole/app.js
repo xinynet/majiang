@@ -1,28 +1,9 @@
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const SYMBOLS=['一筒','二筒','三筒','四筒','五筒','六筒','七筒','八筒','九筒','一索','二索','三索','四索','五索','六索','七索','八索','九索','一萬','二萬','三萬','四萬','五萬','六萬','七萬','八萬','九萬','熊猫','狐狸','猫咪','小狗','狮子','老虎','兔子','猴子','苹果','橙子','柠檬','西瓜','葡萄','草莓','樱桃','桃子'];
 const PICTURE_TILES={熊猫:'panda',狐狸:'fox',猫咪:'cat',小狗:'dog',狮子:'lion',老虎:'tiger',兔子:'rabbit',猴子:'monkey',苹果:'apple',橙子:'orange',柠檬:'lemon',西瓜:'watermelon',葡萄:'grapes',草莓:'strawberry',樱桃:'cherry',桃子:'peach'};
-const PICTURE_SVG={
-  panda:'<g stroke="#183f38" stroke-linejoin="round"><path d="M18 67c3-19 15-31 32-32 18-2 32 9 35 27-5 12-17 19-34 19-16 0-27-5-33-14Z" fill="#eee7d8"/><path d="M30 39c-9-7-18-2-18 8 0 8 6 13 14 12m47-20c9-7 18-2 18 8 0 8-6 13-14 12M25 68l-5 17m23-6-2 9m33-18 6 15M37 39c-8 6-11 14-8 25 7 7 14 7 21 1-5-10-4-19 2-28m10 2c8 6 11 14 8 25-7 7-14 7-21 1" fill="#183f38"/><path d="M28 70c15 6 31 6 47-1" fill="none" stroke="#a07c4c"/></g>',
-  fox:'<g stroke="#56382d" stroke-linejoin="round"><path d="M17 71c12-4 18-14 21-29 3-14 14-23 28-22 11 1 18 7 21 17-10-2-17 1-20 9 7 7 7 16 0 24-9 10-23 12-36 6-6-3-11-2-14 3Z" fill="#b95734"/><path d="m61 21 18-10-4 24M67 46c-7 3-11 8-12 15 8 4 16 3 23-3" fill="#e6b678"/><path d="M24 71c15 5 29 3 42-5" fill="none" stroke="#7d7157"/></g>',
-  cat:'<g stroke="#284a45" stroke-linejoin="round"><path d="M19 79c13-7 18-19 17-36-1-13 6-22 17-25l10-10 2 15c12 5 18 17 14 30-5 16-20 24-37 20-9-2-16 1-23 9Z" fill="#ad8055"/><path d="m53 19 8-8 1 14M42 72c13 1 24-5 32-16M44 37c7-4 14-4 21-1M45 48c7 2 14 1 20-3" fill="none"/><path d="M55 43c3 8 2 15-3 22" fill="none" stroke="#e3c78e"/></g>',
-  dog:'<g stroke="#49382f" stroke-linejoin="round"><path d="M15 76c12-8 18-20 19-36 1-15 12-25 27-24 13 1 22 9 24 21-9-3-16 0-20 7 6 8 6 16 0 24-8 10-21 13-34 8-6-2-11-1-16 4Z" fill="#9c704d"/><path d="M39 21c-12-6-21 1-20 14 1 10 7 17 16 20M65 44c-8 3-12 9-12 17 8 4 16 2 23-4M29 71c13 5 26 3 37-5" fill="#72503d"/></g>',
-  lion:'<g stroke="#69482e" stroke-linejoin="round"><path d="M16 79c9-10 13-22 10-36-3-15 5-27 19-32 18-6 35 4 39 21 3 13-2 23-13 30-5 12-16 18-30 17-9-1-17 1-25 7Z" fill="#966033"/><path d="M39 22c12-7 26-3 33 8-9 1-14 6-15 14 7 4 9 11 6 18-9 5-19 5-28 0-7-15-5-28 4-40Z" fill="#cea05e"/><path d="M28 31c-5 13-4 26 3 38M31 68c12 5 25 4 36-2" fill="none" stroke="#74482d"/></g>',
-  tiger:'<g stroke="#55382d" stroke-linejoin="round"><path d="M13 79c13-8 19-20 21-36 2-16 14-26 30-24 13 2 21 12 20 25-2 18-17 30-36 30-13 0-24 4-35 12Z" fill="#b96131"/><path d="m47 23 9-12 5 12m3 1 13-8-2 16M45 34l13 5m-17 6 14 4m17-14-10 7m10 4-11 5M27 68c13 5 26 4 38-3" fill="none" stroke="#4d342b"/><path d="M52 57c9 5 18 4 26-2" fill="none" stroke="#ddc091" stroke-width="3"/></g>',
-  rabbit:'<g stroke="#465950" stroke-linejoin="round"><path d="M16 79c11-7 17-18 18-32 1-12 7-20 17-24C45 5 53 2 58 22 71 8 79 12 71 31c10 7 14 19 9 31-6 14-22 19-39 14-9-2-17 1-25 9Z" fill="#ddd8cc"/><path d="M52 22c-1-8 0-13 3-17m4 22c6-7 11-11 15-11M47 52c8 4 16 3 23-2M34 69c13 4 26 2 37-5" fill="none" stroke="#8f776f"/></g>',
-  monkey:'<g stroke="#503b30" stroke-linejoin="round"><path d="M16 80c11-8 16-20 14-35-1-15 8-26 23-30 16-4 30 6 33 21 3 16-7 30-23 35-10 4-18 2-26 3-8 1-14 5-21 12Z" fill="#76513b"/><path d="M43 27c11-7 24-3 30 8-8 2-12 7-11 14 6 4 8 10 5 17-9 5-19 5-28-1-8-14-7-27 4-38Z" fill="#b88c62"/><path d="M42 50c8 4 16 3 23-2M34 68c12 4 24 3 34-3" fill="none"/></g>',
-  apple:'<g stroke="#31543d" stroke-width="3" stroke-linejoin="round"><path d="M50 31c-3-12 2-19 12-23" fill="none"/><path d="M53 23c9-12 21-8 24 2-10 5-18 4-24-2Z" fill="#3c8b54"/><path d="M50 30c22-12 36 5 31 29-5 23-18 29-31 20-13 9-26 3-31-20-5-24 9-41 31-29Z" fill="#b83238"/><path d="M36 42c-6 9-6 19-2 28" stroke="#e66e62"/></g>',
-  orange:'<g stroke="#7b4b22" stroke-width="3" stroke-linejoin="round"><path d="M49 25c3-11 11-16 20-15-2 11-9 17-20 15Z" fill="#438b4f"/><path d="M50 24c-1-8-4-12-9-15" fill="none"/><circle cx="50" cy="56" r="30" fill="#df7c27"/><path d="M31 45c-4 8-4 17 0 25" stroke="#f2ac49"/><path d="M41 42h.1m18 6h.1m-8 18h.1m-13 7h.1" stroke-width="5" stroke-linecap="round"/></g>',
-  lemon:'<g stroke="#7d6a24" stroke-width="3" stroke-linejoin="round"><path d="M21 55c8-6 8-18 15-25 12-13 34-7 42 8 8 16-1 36-17 41-10 3-20-3-31 2 1-10-4-18-9-26Z" fill="#e4c93e"/><path d="M35 43c8-12 21-15 32-6" stroke="#fff09a"/></g>',
-  durian:'<g stroke="#4d5a2f" stroke-width="2.2" stroke-linejoin="round"><path d="M49 28c3-12 11-18 21-17-3 10-10 16-21 17Z" fill="#4f7c43"/><path d="M51 29c-2-9-6-15-12-19" fill="none"/><path d="m50 25 7 8 10-4 2 10 11 1-4 10 9 7-8 7 4 10-11 1-3 10-10-4-7 8-7-8-10 4-3-10-11-1 4-10-9-7 9-7-4-10 11-1 3-10 10 4Z" fill="#9e9a3e"/><path d="M34 43c10-7 22-8 33-2M29 56c14-6 29-6 43 0M32 70c12 4 24 4 36-1" fill="none" stroke="#d5c85b" stroke-width="2"/><path d="M50 34v43" fill="none" stroke="#65702f" stroke-width="1.5"/></g>',
-  grapes:'<g stroke="#493a61" stroke-width="2.5"><path d="M51 30c2-13 9-20 18-23" fill="none" stroke="#35764d" stroke-width="4"/><path d="M57 22c9-12 21-8 24 2-10 5-18 4-24-2Z" fill="#3f8b53"/><g fill="#6d4b93"><circle cx="38" cy="38" r="11"/><circle cx="55" cy="37" r="11"/><circle cx="70" cy="44" r="11"/><circle cx="45" cy="54" r="11"/><circle cx="62" cy="57" r="11"/><circle cx="50" cy="72" r="11"/></g></g>',
-  strawberry:'<g stroke="#31543d" stroke-width="3" stroke-linejoin="round"><path d="M28 31c5-12 14-18 22-6 8-12 17-6 22 6-7 2-14 1-22-2-8 3-15 4-22 2Z" fill="#3e8c52"/><path d="M24 35c2 31 12 48 26 54 14-6 24-23 26-54-18-8-34-8-52 0Z" fill="#c83f45"/><path d="M36 46h.1m15-4h.1m14 7h.1M42 61h.1m18 4h.1m-11 11h.1" stroke="#f3d26e" stroke-width="5" stroke-linecap="round"/></g>',
-  cherry:'<g stroke="#31543d" stroke-width="3" stroke-linejoin="round"><path d="M34 61c5-27 13-39 29-48M67 62c-1-22-5-35-13-45" fill="none"/><path d="M56 18c9-12 21-8 24 2-10 5-18 4-24-2Z" fill="#438b50"/><circle cx="30" cy="67" r="17" fill="#b72e3a"/><circle cx="68" cy="68" r="17" fill="#c73b45"/></g>',
-  peach:'<g stroke="#6f4736" stroke-width="3" stroke-linejoin="round"><path d="M52 25c4-12 13-18 23-17-3 12-11 18-23 17Z" fill="#448f52"/><path d="M50 26c-25-17-38 7-30 30 6 18 19 29 30 34 11-5 24-16 30-34 8-23-5-47-30-30Z" fill="#e77b6d"/><path d="M50 31c-7 17-6 36 0 54" fill="none" stroke="#bd4d52"/></g>'
-};
-const state={level:1,unlockedLevel:1,tiles:[],seconds:0,hints:0,shuffles:0,lives:5,lifeDate:'',shareDate:'',shareCount:0,checkinHistory:[],checkinPrompted:false,language:'自动检测',playerName:'玩家',avatarIndex:0,pendingLevel:null,pendingTool:null,cloudLinked:false,timer:null,sound:true,haptic:true,motion:true,started:false,initial:0,records:{},animating:false,effectId:0,dealing:false,dealTimer:null,initialTypeCount:0,slots:[],settleTimer:null,score:0,combo:1,comboUntil:0,tick:0,remain:600,over:false,tools:{clear:1,shuffle:1,undo:1,magnet:1}};
+const state={level:1,unlockedLevel:1,tiles:[],seconds:0,shuffles:0,lives:5,lifeDate:'',shareCount:0,checkinHistory:[],checkinPrompted:false,language:'自动检测',playerName:'玩家',avatarIndex:0,pendingLevel:null,pendingTool:null,cloudLinked:false,timer:null,sound:true,haptic:true,motion:true,initial:0,records:{},animating:false,effectId:0,dealing:false,dealTimer:null,initialTypeCount:0,slots:[],score:0,combo:1,comboUntil:0,tick:0,remain:600,over:false,tools:{clear:1,shuffle:1,undo:1,magnet:1}};
 
 function todayKey(){const d=new Date();return`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`}
-const VIDEO_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="14" height="14" rx="4"/><path d="m17 10 4-2v8l-4-2Z"/></svg>';
 function updateLivesUI(){$$('.lifeCount').forEach(el=>el.textContent=state.lives);$$('.life-badge').forEach(el=>el.classList.toggle('empty',state.lives<=0));$$('.energy-add').forEach(btn=>{btn.disabled=false;btn.classList.remove('disabled','video-ready');btn.textContent='+';btn.setAttribute('aria-label','观看视频增加体力')});const status=$('#energyAdStatus');if(status)status.textContent=`当前体力 ${state.lives}点，观看一段模拟广告即可补充。`}
 function saveLives(){localStorage.setItem('mahjong-daily-lives',JSON.stringify({date:state.lifeDate||todayKey(),lives:state.lives}));updateLivesUI()}
 function loadLives(){const today=todayKey();try{const saved=JSON.parse(localStorage.getItem('mahjong-daily-lives')||'null');if(saved?.date===today){state.lives=Math.max(0,saved.lives??5)}else{state.lives=Math.max(5,saved?.lives||0)}state.lifeDate=today;saveLives()}catch(e){state.lives=5;state.lifeDate=today}updateLivesUI()}
@@ -31,7 +12,7 @@ function cloudProgress(){const stars={};Object.entries(state.records).forEach(([
 function syncCloudProgress(){if(!state.cloudLinked)return;localStorage.setItem('mahjong-cloud-progress-demo',JSON.stringify(cloudProgress()));updateCloudUI()}
 function mergeCloudProgress(){let cloud={};try{cloud=JSON.parse(localStorage.getItem('mahjong-cloud-progress-demo')||'{}')}catch(e){}state.unlockedLevel=Math.max(state.unlockedLevel,cloud.highest||1);Object.entries(cloud.stars||{}).forEach(([level,stars])=>{const old=state.records[level]||{};state.records[level]={...old,played:old.played||0,best:old.best||0,stars:Math.max(old.stars||0,stars||0)}});localStorage.setItem('sparrow-records-v36',JSON.stringify(state.records));saveProgress();syncCloudProgress();renderJourney()}
 function dateKey(d=new Date()){return`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`}
-function loadSocialRewards(){const today=todayKey(),share=JSON.parse(localStorage.getItem('mahjong-daily-shares')||'null');state.shareDate=today;state.shareCount=share?.date===today?Math.min(3,share.count||0):0;state.checkinHistory=JSON.parse(localStorage.getItem('mahjong-checkins')||'[]');updateShareUI();renderCheckin();const signed=state.checkinHistory.includes(today);$('#checkinStatus').textContent=signed?'今日已签到':'今日未签到';if(!signed&&!state.checkinPrompted){state.checkinPrompted=true;setTimeout(()=>openCheckin(),500)}}
+function loadSocialRewards(){const today=todayKey(),share=JSON.parse(localStorage.getItem('mahjong-daily-shares')||'null');state.shareCount=share?.date===today?Math.min(3,share.count||0):0;state.checkinHistory=JSON.parse(localStorage.getItem('mahjong-checkins')||'[]');updateShareUI();renderCheckin();const signed=state.checkinHistory.includes(today);$('#checkinStatus').textContent=signed?'今日已签到':'今日未签到';if(!signed&&!state.checkinPrompted){state.checkinPrompted=true;setTimeout(()=>openCheckin(),500)}}
 function updateShareUI(){$('#shareStatus').textContent=state.shareCount<1?'今日首次分享可领取2点体力':'今日分享奖励已领取'}
 function updateLanguageUI(){const status=$('#languageStatus');if(status)status.textContent=state.language;$$('#languageList button').forEach(btn=>btn.classList.toggle('selected',btn.dataset.language===state.language))}
 function renderCheckin(){const box=$('#checkinWeek');if(!box)return;const now=new Date(),day=now.getDay()||7,monday=new Date(now);monday.setHours(0,0,0,0);monday.setDate(now.getDate()-day+1);box.innerHTML='';['一','二','三','四','五','六','日'].forEach((label,i)=>{const d=new Date(monday);d.setDate(monday.getDate()+i);const key=dateKey(d),reward=i>=5?2:1,el=document.createElement('div');el.className=`checkin-day${key===todayKey()?' today':''}${state.checkinHistory.includes(key)?' claimed':''}`;el.innerHTML=`<small>周${label}</small><b>${state.checkinHistory.includes(key)?'✓':'⚡'}</b><span>+${reward}</span>`;box.appendChild(el)});const signed=state.checkinHistory.includes(todayKey());$('#claimCheckinBtn').disabled=signed;$('#claimCheckinBtn').textContent=signed?'今日已签到':'签到领取体力';$('#checkinStatus').textContent=signed?'今日已签到':'今日未签到'}
@@ -107,7 +88,6 @@ function renderJourney(){
   }
   requestAnimationFrame(()=>{const current=map.querySelector('.current');if(current)map.scrollTop=Math.max(0,current.offsetTop-map.clientHeight*.28)});
 }
-const TILT=28,TILT_COS=Math.cos(TILT*Math.PI/180);
 function removalOrder(list){return[...list].sort((a,b)=>b.z-a.z||a.y-b.y||a.x-b.x)}
 function shuffleWith(rnd,list){const c=[...list];for(let i=c.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[c[i],c[j]]=[c[j],c[i]]}return c}
 function dealTriples(rnd){
@@ -133,8 +113,8 @@ function buildLevel(level){
   const hands=$('#boardWrap .shuffle-hands');
   if(hands)hands.replaceWith(hands.cloneNode(true));
   state.animating=true;state.dealing=true;state.over=false;
-  $$('.match-clone,.match-burst').forEach(el=>el.remove());closeSheets(false);
-  state.level=level;state.seconds=0;state.tick=0;state.remain=600;state.hints=0;state.shuffles=0;
+  closeSheets(false);
+  state.level=level;state.seconds=0;state.tick=0;state.remain=600;state.shuffles=0;
   state.slots=[];state.score=0;state.combo=1;state.comboUntil=0;
   state.tools={clear:1,shuffle:1,undo:1,magnet:1};
   showScreen('game');
@@ -155,12 +135,6 @@ function buildLevel(level){
   },dealDuration);
   saveProgress();if(level!==1)$('#coach').classList.add('hidden');
 }
-function tileStatus(t){
-  if(t.removed||t.inTray)return{free:false,blockers:[]};
-  const above=state.tiles.filter(o=>!o.removed&&!o.inTray&&o.z>t.z&&Math.abs(o.x-t.x)<.88&&Math.abs(o.y-t.y)<.88);
-  return{free:!above.length,blockers:above.map(o=>o.id)};
-}
-function isFree(t){return tileStatus(t).free}
 function assignLeaners(rnd){
   TileMotion.assignLeaners(state.tiles,rnd);
 }
@@ -180,49 +154,7 @@ function settleBoard(){
   return changed;
 }
 const FACE_NUM={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9};
-const FACE_COLORS=['#146c59','#b52d2a','#21699a'];
-const FACE_POS={
-  1:[[50,50]],2:[[50,29],[50,71]],3:[[29,27],[50,50],[71,73]],
-  4:[[31,30],[69,30],[31,70],[69,70]],5:[[29,27],[71,27],[50,50],[29,73],[71,73]],
-  6:[[31,24],[69,24],[31,50],[69,50],[31,76],[69,76]],
-  7:[[30,22],[70,22],[30,50],[50,50],[70,50],[30,78],[70,78]],
-  8:[[31,18],[69,18],[31,39],[69,39],[31,61],[69,61],[31,82],[69,82]],
-  9:[[26,22],[50,22],[74,22],[26,50],[50,50],[74,50],[26,78],[50,78],[74,78]]
-};
-function svgFace(body){return`<svg class="tile-art" viewBox="8 8 84 84" aria-hidden="true">${body}</svg>`}
-function circleFace(n){
-  const B='#2639a7',G='#075c45',R='#b40e40',patterns={
-    2:[[50,26,B],[50,74,G]],3:[[27,27,B],[50,50,R],[73,73,G]],
-    4:[[30,29,B],[70,29,G],[30,71,G],[70,71,B]],
-    5:[[29,27,B],[71,27,G],[50,50,R],[29,73,G],[71,73,B]],
-    6:[[34,22,G],[66,22,G],[34,49,R],[66,49,R],[34,77,R],[66,77,R]],
-    7:[[24,18,G],[49,34,G],[74,50,G],[35,65,R],[65,65,R],[35,83,R],[65,83,R]],
-    8:[[36,16,B],[64,16,B],[36,39,B],[64,39,B],[36,62,B],[64,62,B],[36,84,B],[64,84,B]],
-    9:[[24,22,B],[50,22,B],[76,22,B],[24,50,R],[50,50,R],[76,50,R],[24,78,G],[50,78,G],[76,78,G]]
-  };
-  if(n===1)return svgFace(`<g transform="translate(50 50)"><circle r="31" fill="${B}"/><circle r="27" fill="#f9f7ea"/><circle r="23" fill="${G}"/><circle r="19" fill="#f9f7ea"/><circle r="15" fill="${G}"/><circle r="11" fill="#f9f7ea"/><circle r="8" fill="${R}"/><circle r="5" fill="#f9f7ea"/></g>`);
-  const dots=patterns[n].map((p)=>{const [x,y,c]=p,r=n>=8?7.8:n===7?7.4:9.2;return`<g transform="translate(${x} ${y})"><circle r="${r}" fill="#183c35"/><circle r="${r*.8}" fill="${c}"/><circle r="${r*.55}" fill="#faf7e9"/><circle r="${r*.31}" fill="${c}"/><circle r="${r*.12}" fill="#faf7e9"/></g>`}).join('');
-  return svgFace(dots);
-}
-function bambooFace(n){
-  const B='#2639a7',G='#075c45',R='#b40e40';
-  if(n===1)return svgFace(`<g stroke-linecap="round" stroke-linejoin="round"><path d="M54 18c13 3 19 13 15 25-3 9-12 14-22 11-8-2-13-9-12-17 1-9 8-15 19-15" fill="#f8f3df" stroke="${B}" stroke-width="3"/><path d="M49 25c9-2 15 3 16 11-8-4-16-2-21 5 0-8 1-13 5-16Z" fill="${B}"/><path d="M36 48c-11 4-19 13-23 25m24-19c-4 14-11 24-22 31m28-29c-2 15 1 25 8 32m-5-33c8 10 18 15 31 16M34 45 17 38m17 7-18 5" fill="none" stroke="${G}" stroke-width="3"/><path d="M42 53c7 3 12 9 14 18-8-2-14-6-18-13Z" fill="${R}"/><path d="M51 19c5-7 12-8 18-4l-10 7Z" fill="${R}"/><circle cx="57" cy="29" r="2.3" fill="#172b28"/><path d="m67 34 11 3-10 5Z" fill="#c28a2d"/></g>`);
-  if(n===8)return svgFace(`<g fill="none" stroke="${G}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><path d="M24 18v23m52-23v23M31 20l19 17 19-17M24 59v23m52-23v23M31 61l19 17 19-17"/><path d="M24 29h7m38 0h7M24 70h7m38 0h7" stroke="#d8efe4" stroke-width="1.5" opacity=".55"/></g>`);
-  const patterns={
-    2:[[50,27,G],[50,73,G]],3:[[50,24,G],[32,72,G],[68,72,G]],
-    4:[[34,28,G],[66,28,G],[34,72,G],[66,72,G]],
-    5:[[32,25,G],[68,25,G],[50,50,R],[32,75,G],[68,75,G]],
-    6:[[28,28,G],[50,28,G],[72,28,G],[28,72,G],[50,72,G],[72,72,G]],
-    7:[[30,45,G],[30,73,G],[50,19,R],[50,46,B],[50,73,B],[70,45,G],[70,73,G]],
-    9:[[25,22,G],[50,22,R],[75,22,G],[25,50,G],[50,50,R],[75,50,G],[25,78,G],[50,78,R],[75,78,G]]
-  };
-  const pieces=patterns[n].map(([x,y,c])=>`<g transform="translate(${x} ${y})"><path d="M-6-11H6C3-7 3-3 6 0C3 3 3 7 6 11H-6C-3 7-3 3-6 0C-3-3-3-7-6-11Z" fill="#173d31"/><path d="M-4.2-9H4.2C2-5 2-2 4.2 0C2 2 2 5 4.2 9H-4.2C-2 5-2 2-4.2 0C-2-2-2-5-4.2-9Z" fill="${c}"/></g>`).join('');
-  return svgFace(pieces);
-}
-const WAN_CHARS=['','一','二','三','四','伍','六','七','八','九'];
-function embossText(cls,ch,y){return`<text class="${cls} wan-sh" x="50.5" y="${y+.6}">${ch}</text><text class="${cls} wan-hi" x="49.6" y="${y-.4}">${ch}</text><text class="${cls}" x="50" y="${y}">${ch}</text>`}
-function wanFace(n){return`<svg class="tile-art" viewBox="0 0 100 137" aria-hidden="true">${embossText('wan-num',WAN_CHARS[n],58)}${embossText('wan-char','萬',122)}</svg>`}
-function tileFace(type){const n=FACE_NUM[type[0]]||0;if(type.endsWith('萬'))return wanFace(n);const key=type.endsWith('筒')?`circle-${n}`:type.endsWith('索')?`bamboo-${n}`:PICTURE_TILES[type];return`<img class="tile-reference-art" src="assets/tiles-face/${key}.png" alt="" aria-hidden="true">`}
+function tileFace(type){const n=FACE_NUM[type[0]]||0;const key=type.endsWith('萬')?`wan-${n}`:type.endsWith('筒')?`circle-${n}`:type.endsWith('索')?`bamboo-${n}`:PICTURE_TILES[type];return`<img class="tile-reference-art" src="assets/tiles-face/${key}.png" alt="" aria-hidden="true">`}
 function boardMetrics(){const xs=state.tiles.map(t=>t.layoutX??t.x),ys=state.tiles.map(t=>t.layoutY??t.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys),spanX=maxX-minX+1.12,spanY=maxY-minY+1.02,b=$('#board').getBoundingClientRect(),count=state.tiles.length,gap=0,maxLayer=Math.max(0,...state.tiles.map(t=>t.layoutZ??t.z)),edge={left:10+maxLayer*5,top:10+maxLayer*9,right:16,bottom:18},availableW=Math.max(1,b.width-edge.left-edge.right),availableH=Math.max(1,b.height-edge.top-edge.bottom),ratio=1.3636,preferredMax=state.level===1?96:count<=16?112:count<=28?100:count<48?86:78,widthLimit=availableW/spanX,heightLimit=(availableH/spanY)/ratio,w=Math.max(20,Math.min(preferredMax,widthLimit,heightLimit)),h=w*ratio,totalW=w*spanX,totalH=h*spanY,freeX=Math.max(0,availableW-totalW),freeY=Math.max(0,availableH-totalH);return{w,h,gap,ox:edge.left+freeX/2-minX*(w+gap),oy:edge.top+freeY/2-minY*(h+gap)}}
 const tileEls=new Map();
 function tileMarkup(t){
@@ -232,9 +164,6 @@ function poseTransform(t,lean,z,width=0){
   const spin=(t.rot||0)+(t.rot2||0);
   const lift=Math.abs(Math.sin(lean*Math.PI/180))*width*.27;
   return`translate(${-z*5}px,${-z*9-lift}px) rotate(${spin}deg)`;
-}
-function tileTransform(t){
-  return poseTransform(t,t.stand||0,t.z);
 }
 function paintTilePose(el,t,p,m){
   const sample=Math.max(0,Math.min(TILE_POSES.length-1,(p.lean+70)/5));
@@ -419,7 +348,6 @@ function toolMagnet(){
   if(board.length<need){toast('牌面里没有足够的同款麻将');return false}
   clearTiles([...state.slots.filter(s=>s.type===type),...removalOrder(board).slice(0,need)],`磁铁吸出了${need}张${type}`);
 }
-function shuffleTiles(){useTool('shuffle')}
 function startTimer(){
   if(state.timer||state.dealing||state.over)return;
   state.timer=setInterval(()=>{
@@ -476,5 +404,5 @@ function syncCheckinShortcut(){const btn=$('#checkinBtn'),status=$('#checkinStat
 new MutationObserver(syncCheckinShortcut).observe($('#checkinStatus'),{childList:true,subtree:true});
 loadPrefs();loadPlayerProfile();renderJourney();updateCloudUI();syncCheckinShortcut();if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 
-function updateMotion(value){state.motion=value;if(!value)state.tiles.forEach(t=>t.motion=null);syncSettingToggles();savePrefs();if(state.started||state.tiles.length)render();}
+function updateMotion(value){state.motion=value;if(!value)state.tiles.forEach(t=>t.motion=null);syncSettingToggles();savePrefs();if(state.tiles.length)render();}
 ['motionToggle','gameMotionToggle'].forEach(id=>$('#'+id).onchange=e=>updateMotion(e.target.checked));

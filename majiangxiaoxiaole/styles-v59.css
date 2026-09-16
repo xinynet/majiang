@@ -62,39 +62,7 @@
   transition:left .3s ease,top .3s ease,transform .3s ease,opacity .18s;
 }
 #game .tile:before,#game .tile:after{display:none!important}
-
-/* 牌面：素材本身就是一整张麻将，裁掉外框只留图案，避免「牌中牌」 */
-#game .tile-face{
-  position:absolute;inset:0;overflow:hidden;backface-visibility:hidden;
-  border-radius:calc(var(--tw,50px) * .035);
-  background:linear-gradient(158deg,#ffffff 0%,#fdfdfd 64%,#f8f8f8 100%);
-  /* 圆楞的反光：沿左上圆角一圈纯白亮弧，右下收一点极淡的中性暗面 */
-  box-shadow:
-    inset 2.5px 2.5px 0 -0.5px rgba(255,255,255,1),
-    inset 0 4px 6px -2px rgba(255,255,255,1),
-    inset 3px 0 5px -3px rgba(255,255,255,1),
-    inset -1.5px -2px 4px -1px rgba(70,70,70,.13),
-    0 4px 7px rgba(42,42,42,.26);
-  transform:translateZ(calc(var(--td,7px) / 2));
-}
-#game .tile.layer-1 .tile-face{box-shadow:inset 2.5px 2.5px 0 -0.5px rgba(255,255,255,1),inset 0 4px 6px -2px rgba(255,255,255,1),inset 3px 0 5px -3px rgba(255,255,255,1),inset -1.5px -2px 4px -1px rgba(70,70,70,.13),0 6px 9px rgba(38,38,38,.3)}
-#game .tile.layer-2 .tile-face{box-shadow:inset 2.5px 2.5px 0 -0.5px rgba(255,255,255,1),inset 0 4px 6px -2px rgba(255,255,255,1),inset 3px 0 5px -3px rgba(255,255,255,1),inset -1.5px -2px 4px -1px rgba(70,70,70,.13),0 8px 12px rgba(34,34,34,.34)}
 #game .tile.picked{pointer-events:none;opacity:0}
-
-/* 每张牌都是真正的六面盒子：正面雪白，背面整片红，侧面从贴着正面的白渐变到靠背面的红 */
-#game .tile-rim{position:absolute;display:block;backface-visibility:hidden;border-radius:calc(var(--tw,50px) * .035)}
-#game .rim-l,#game .rim-r{left:50%;top:0;height:100%;width:var(--td,7px);margin-left:calc(var(--td,7px) / -2)}
-/* 楞只有白，最靠近背面的一窄条才是红 —— 不掺任何灰或米色 */
-#game .rim-l{transform:translateX(calc(var(--tw,50px) / -2)) rotateY(-90deg);background:linear-gradient(to right,#ae291c 0%,#d63d2c 13%,#fbfbfb 19%,#ffffff 70%,#fafafa 100%)}
-#game .rim-r{transform:translateX(calc(var(--tw,50px) / 2)) rotateY(90deg);background:linear-gradient(to right,#fafafa 0%,#ffffff 30%,#fbfbfb 81%,#d63d2c 87%,#ae291c 100%)}
-#game .rim-t,#game .rim-b{left:0;width:100%;top:50%;height:var(--td,7px);margin-top:calc(var(--td,7px) / -2)}
-#game .rim-t{transform:translateY(calc(var(--th,64px) / -2)) rotateX(90deg);background:linear-gradient(to bottom,#ae291c 0%,#d63d2c 22%,#ffffff 30%,#ffffff 72%,#fcfcfc 100%)}
-#game .rim-b{transform:translateY(calc(var(--th,64px) / 2)) rotateX(-90deg);background:linear-gradient(to bottom,#fcfcfc 0%,#ffffff 30%,#fbfbfb 68%,#d63d2c 78%,#ae291c 100%)}
-
-/* 倚靠的牌被抽走后：慢慢展开、带一点回弹地躺平 */
-#game .tile.falling{transition:transform .9s cubic-bezier(.22,.82,.3,1.04),left .9s cubic-bezier(.25,.7,.35,1),top .9s cubic-bezier(.25,.7,.35,1)}
-/* 下层被抽走后上层受重力下滑 */
-#game .tile.dropping{transition:transform .46s cubic-bezier(.4,.05,.5,1),left .46s cubic-bezier(.4,.05,.5,1),top .46s cubic-bezier(.36,.12,.3,1.12)}
 
 #game .tile-reference-art,#game .g-slot .tile-reference-art{
   position:absolute;inset:0;width:100%;height:100%;

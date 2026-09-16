@@ -33,6 +33,11 @@
       for(const t of [...live].sort((a,b)=>a.z-b.z)){
         const p=result.get(t.id);
         if(p.z>0&&!live.some(o=>o.id!==t.id&&result.get(o.id).z===p.z-1&&Math.abs(o.x-p.x)<.86&&Math.abs(o.y-p.y)<.86)){
+          // Losing its footing, a tile slides off the edge as it drops instead of
+          // dropping straight down. It goes the way it was already tilted, which
+          // keeps the result deterministic for the regression checks.
+          const dir=Math.sign(t.rot||0)||1;
+          p.x+=dir*.2;p.y+=.13;
           p.z--;changed=true;
         }
         const prop=result.get(p.leanOn);
@@ -56,18 +61,21 @@
       return false;
     }
     if(Math.abs(p.lean-goal.lean)>.02){
-      m.angularVelocity+=-Math.sign(p.lean-goal.lean)*190*Math.max(.25,Math.cos(p.lean*Math.PI/180))*dt;
+      m.angularVelocity+=-Math.sign(p.lean-goal.lean)*95*Math.max(.25,Math.cos(p.lean*Math.PI/180))*dt;
       const next=p.lean+m.angularVelocity*dt;
       if((p.lean-goal.lean)*(next-goal.lean)<=0){p.lean=goal.lean;m.angularVelocity=0;}else p.lean=next;
     }else p.lean=goal.lean;
     if(p.z>goal.z||m.velocity!==0){
-      m.velocity-=20*dt;p.z+=m.velocity*dt;
+      m.velocity-=9*dt;p.z+=m.velocity*dt;
       if(p.z<=goal.z){p.z=goal.z;m.velocity=0;}
     }
     const angleProgress=m.from.lean===goal.lean?1:1-Math.abs((p.lean-goal.lean)/(m.from.lean-goal.lean));
     const fallProgress=m.from.z===goal.z?1:1-Math.abs((p.z-goal.z)/(m.from.z-goal.z));
     const progress=Math.max(0,Math.min(1,Math.min(angleProgress,fallProgress)));
-    p.x=m.from.x+(goal.x-m.from.x)*progress;p.y=m.from.y+(goal.y-m.from.y)*progress;
+    // Friction: the slide runs out before the drop finishes, so the tile eases
+    // to a stop instead of skating the whole way down.
+    const slide=1-(1-progress)*(1-progress);
+    p.x=m.from.x+(goal.x-m.from.x)*slide;p.y=m.from.y+(goal.y-m.from.y)*slide;
     if(p.lean===goal.lean&&p.z===goal.z)m.impactTime=0;
     return false;
   }

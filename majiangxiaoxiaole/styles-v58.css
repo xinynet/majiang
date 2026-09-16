@@ -4,14 +4,6 @@
 
 .tile{transform-origin:50% 62%;transition:left .25s,top .25s,transform .28s cubic-bezier(.2,.8,.2,1),opacity .2s}
 .tile.layer-1{z-index:3}.tile.layer-2{z-index:4}
-.tile.selected:not(.deal-in):not(.match-clone){z-index:99!important;transform:translate(var(--rest-x,0),calc(var(--rest-y,0) - 14px)) rotate(var(--rest-rot,0deg)) scale(1.07)!important}
-.tile.hint{z-index:155!important}
-.tile.hint:not(.deal-in):not(.match-clone){animation:rainbowHintScatter 1s ease-in-out 2!important}
-@keyframes rainbowHintScatter{0%,100%{transform:translate(var(--rest-x,0),calc(var(--rest-y,0) - 4px)) rotate(var(--rest-rot,0deg)) scale(1.03)}50%{transform:translate(var(--rest-x,0),calc(var(--rest-y,0) - 13px)) rotate(var(--rest-rot,0deg)) scale(1.12)}}
-.tile.tutorial-target{animation:tutorialGlowScatter 1s ease-in-out infinite!important;z-index:120!important}
-@keyframes tutorialGlowScatter{0%,100%{transform:translate(var(--rest-x,0),var(--rest-y,0)) rotate(var(--rest-rot,0deg)) scale(1);filter:brightness(1)}50%{transform:translate(var(--rest-x,0),calc(var(--rest-y,0) - 7px)) rotate(var(--rest-rot,0deg)) scale(1.05);filter:brightness(1.13)}}
-.tile.covered{filter:saturate(.8) brightness(.94)}
-.tile.covered .tile-reference-art{filter:saturate(.8) brightness(.9) drop-shadow(0 7px 7px rgba(22,46,31,.25))}
 @keyframes dealTile{0%{opacity:0;transform:translate(calc(var(--deal-x) + var(--rest-x)),calc(var(--deal-y) + var(--rest-y) - var(--deal-lift))) scale(.28) rotate(calc(var(--rest-rot,0deg) + var(--deal-rotate)));filter:brightness(.76) saturate(.8)}24%{opacity:1}64%{transform:translate(var(--rest-x),calc(var(--rest-y) - 10px)) scale(1.055) rotate(calc(var(--rest-rot,0deg) - 1deg));filter:brightness(1.1)}82%{transform:translate(var(--rest-x),calc(var(--rest-y) + 3px)) scale(.98) rotate(var(--rest-rot,0deg))}100%{opacity:1;transform:translate(var(--rest-x),var(--rest-y)) rotate(var(--rest-rot,0deg)) scale(1);filter:none}}
 .tile.deal-in{pointer-events:none;animation:dealTile .58s var(--deal-delay) cubic-bezier(.18,.82,.25,1.08) both;transition:none}
 .tile.layer-1.deal-in,.tile.layer-2.deal-in{animation-duration:.68s}
