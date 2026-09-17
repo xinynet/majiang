@@ -1,4 +1,8 @@
-.claude/
+# Personal Claude Code state (local permissions, launch config) stays local;
+# skills are shared so a colleague's own Claude Code gets the same know-how.
+.claude/*
+!.claude/skills/
+!.claude/skills/**
 node_modules/
 dist/
 unpackage/

@@ -62,7 +62,7 @@ cli.bat auto --project C:\mydev\majiang\majiang-mp\dist\build\mp-weixin --auto-p
 - 输出目录：c:\mydev\majiang\devtools_shots\
 - 旧的 full_v2.js 已失效，见下条
 - 两个脚本都自带连接重试：`cli auto` 返回时模拟器还没监听，第一次连必然失败，不用自己掐时间
-- **automator 每张截图往返约 2 秒**，所以 2 秒内的动画根本截不到；要看就得先把时长临时拉长
+- **automator 每张截图往返约 2 秒**（含页面跳转接近 3 秒），几秒内的动画多半截不到；要稳定拍到就先把时长临时拉长
 
 ### ⚠️ callMethod 已不可用
 
@@ -84,7 +84,7 @@ cli.bat auto --project C:\mydev\majiang\majiang-mp\dist\build\mp-weixin --auto-p
 
 | 文件 | 页面 |
 |------|------|
-| 带进度条的小程序游戏启动界面.png | 启动页 |
+| 启动界面.png | 启动页（2026-09-17 换为「田园碰碰消」新版）|
 | index.jpg | 首页 |
 | 0e5b39aca423980735833fe5710881f2.jpg | 幸运礼包弹窗 |
 | 5f42c2f1cd2a6ff541de042d6025cb7c.jpg | 金库银行弹窗 |
@@ -114,7 +114,7 @@ cli.bat auto --project C:\mydev\majiang\majiang-mp\dist\build\mp-weixin --auto-p
 
 ### 关键资源
 
-- /static/ui/splash_bg.jpg：启动页插画（由参考图压成 750×1333 JPG，约 195KB）
+- /static/ui/splash_bg.jpg：启动页插画「田园碰碰消」（由 miniprogram截图/启动界面.png 压成 750×1625 JPG，约 223KB；换图要重量进度条位置，见动画 skill）
 - /static/ui/bg_home.jpg：首页全景背景
 - /static/ui/lucky_chest_header.png：幸运礼包头图（已含"幸运礼包"字，不要再加文字！）
 - /static/ui/piggy_hero_exact.png：金库银行金猪艺术图
@@ -139,6 +139,40 @@ const modalOpen = computed(() => paused.value || isWon.value || isLost.value
 // 关闭弹窗后要重画一次，display:none 回来可能是空位图
 watch(modalOpen, open => { if (!open) nextTick(paint); });
 ```
+
+同一个原因还会造成另一个现象：**在对局中途 `reLaunch`/`navigateTo` 离开游戏页时，
+新页面还没画出来（白屏），旧页面的 canvas 却还在最上层合成，看起来就是「白屏上飘着几张麻将」。**
+正常玩法不会碰到——「重新开始」「下一关」都只是重新 `start(level)`，不换页；
+「返回首页」时弹窗已经开着、canvas 已经被 `:hidden` 藏起来了。
+只有自动化脚本在对局中途强行 `reLaunch` 才会看到，那是脚本的现象，不是游戏的 bug。
+
+### `<canvas type="2d">` 的触摸事件不给 canvas 坐标（点牌没反应的根因）
+
+老的 `canvas-id` 画布，每个 touch 上都带相对画布左上角的 `x`/`y`。
+**`type="2d"` 的画布没有**，只给标准的 `clientX/clientY/pageX/pageY`——那是**相对屏幕**的，
+含状态栏、顶部操作栏、关卡信息条。直接拿去做命中检测，等于把每一次点击往下偏了约 150px，
+所以「点麻将经常没反应」，偶尔响应的那几次消掉的还是别的牌。
+
+正确做法（已实现）：查询时一并取 `rect`，把画布在屏幕上的位置记下来，点击时减掉。
+
+```js
+// platform.js：fields({ node: true, size: true, rect: true })
+// game.vue：
+let x = p.x, y = p.y;                       // 老画布才有
+if (x === undefined) {
+  x = (p.clientX ?? p.pageX ?? 0) - boardRect.left;
+  y = (p.clientY ?? p.pageY ?? 0) - boardRect.top;
+}
+```
+
+### 量 canvas 尺寸要等布局稳定
+
+顶部操作栏会在拿到系统胶囊位置后给自己加上状态栏高度的 padding，下面的棋盘随之变矮
+（实测 544 → 497，少了 47px）。如果在这之前就量了 canvas，牌阵会按 544 排布却画进 497 的画布里，
+**牌被压扁，而且命中检测越往下偏得越多**。
+
+`resolveCanvas()` 现在要求**连续两次量到相同尺寸**才返回，`onMounted` 里也先 `await nextTick()`
+等顶部栏的 padding 生效。改这块布局时别把这两条去掉。
 
 ### WXSS 不要用 transform: translate(-50%,-50%) 做整页居中
 
@@ -166,14 +200,14 @@ lucky_chest_header.png 图片本身已含立体文字"幸运礼包"，不要再�
 **要改动画先读 `.claude/skills/animation-tuning/SKILL.md`**，那里有三套动画的全部
 参数、改法、硬约束和验证脚本。本节只留一个概览。
 
-`game-core.js` 的 `dealIn()`：所有牌先叠在牌阵中心正上方（z = 最高层 + `DEAL_HEIGHT` 1.6），
-按随机顺序错开 `DEAL_STAGGER`(450ms) 依次下落，复用 `tile-motion.js` 里
+`game-core.js` 的 `dealIn()`：所有牌先叠在牌阵中心正上方（z = 最高层 + `DEAL_HEIGHT` 2.2），
+按随机顺序错开 `DEAL_STAGGER`(1800ms) 依次下落，复用 `tile-motion.js` 里
 「失去支撑后下坠 + 滑行 + 落地回弹」那套物理，落点就是各自的布局位置。
 发牌期间 `shuffle-hands.js` 把两只手画进同一块 canvas（不能用 `<image>`，会被牌盖住）。
 
 - `stepMotion()` 里先扣 `motion.delay` 再走物理步进，延迟期间牌停在起点
-- `build()` 返回 `DEAL_DURATION`(1900ms)，game.vue 用这个值决定何时开始计时、何时撤走双手
-- 实测（1~20 关）：最慢 1.87 秒全部落定，0 张牌落错位置，整体在 2 秒以内
+- `build()` 返回 `DEAL_DURATION`(3300ms)，game.vue 用这个值决定何时开始计时、何时撤走双手
+- 实测（1~20 关）：最慢 3.22 秒全部落定，0 张牌落错位置
 
 > 尾巴不是 `DEAL_STAGGER` 决定的，是斜靠的牌倒下来的角速度决定的。
 > 把 stagger 从 600 砍到 350，最慢的一关只从 1.95s 缩到 1.73s。

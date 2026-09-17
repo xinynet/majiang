@@ -16,10 +16,16 @@ const track = reactive({});
 // Long enough for the bar to read as a real load rather than a flicker.
 const MIN_SHOW_MS = 1800;
 
-/* Where the pill is painted into splash_bg, in source-image pixels. The bar is
- * laid over it, so it has to follow the same crop the artwork gets. */
-const ART_W = 941, ART_H = 1672;
-const PILL = { left: 60, right: 885, top: 1550, bottom: 1606 };
+/* Where the pill is painted into splash_bg, in the source artwork's own pixels.
+ * The live bar is laid over that painted pill, so it has to follow the same
+ * crop the artwork gets. These are measured off 启动界面.png, and only their
+ * ratio to ART_W/ART_H matters - the exported JPG is smaller, which is fine as
+ * long as it keeps the same aspect. Re-measure all six numbers when the
+ * artwork changes. */
+const ART_W = 852, ART_H = 1846;
+const PILL = { left: 57, right: 795, top: 1667, bottom: 1716 };
+// Never let the bar fall off the bottom of a shorter screen (see placeTrack).
+const MIN_BOTTOM_GAP = 16;
 
 const PRELOAD = [
   '/static/ui/bg_home.jpg',
@@ -28,17 +34,26 @@ const PRELOAD = [
 ];
 
 /* aspectFill scales the art to cover the screen and centres the overflow, so
- * the bar's offsets are measured from where the art actually lands. */
+ * the bar's offsets are measured from where the art actually lands.
+ *
+ * The artwork is 852x1846, about 19.5:9. On a screen that tall the painted pill
+ * lands exactly where this puts the live bar. On a 16:9 screen aspectFill has
+ * to crop roughly a fifth of the height, and the pill - which sits at 90% of
+ * the art - is cropped away with it; left alone the live bar would go off the
+ * bottom edge too. Pulling it back up keeps a progress bar on screen, and since
+ * the painted one is fully cropped by then there is nothing to double up with. */
 function placeTrack() {
   const info = uni.getWindowInfo ? uni.getWindowInfo() : uni.getSystemInfoSync();
   const w = info.windowWidth, h = info.windowHeight;
   const scale = Math.max(w / ART_W, h / ART_H);
   const artW = ART_W * scale, artH = ART_H * scale;
   const originX = (w - artW) / 2, originY = (h - artH) / 2;
+  const height = (PILL.bottom - PILL.top) * scale;
+  const top = Math.min(originY + PILL.top * scale, h - height - MIN_BOTTOM_GAP);
   track.left = (originX + PILL.left * scale) + 'px';
   track.right = (w - originX - PILL.right * scale) + 'px';
-  track.top = (originY + PILL.top * scale) + 'px';
-  track.height = ((PILL.bottom - PILL.top) * scale) + 'px';
+  track.top = top + 'px';
+  track.height = height + 'px';
 }
 
 function loadOne(src) {
@@ -91,20 +106,22 @@ onMounted(async () => {
   height: 100vh;
 }
 
+/* Colours sampled straight out of the artwork's own pill, so the live bar sits
+ * on top of the painted one without showing a seam. */
 .progress-track {
   position: absolute;
   border-radius: 999px;
-  background: linear-gradient(180deg, #0d3b2c, #124a38);
-  border: 2px solid #1fcf9e;
+  background: linear-gradient(180deg, #041a2c, #07262f);
+  border: 2px solid #00e7dc;
   overflow: hidden;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45);
 }
 
 .progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(180deg, #ffe37a, #f7a91d);
-  box-shadow: 0 0 8px rgba(255, 200, 60, 0.6);
+  background: linear-gradient(180deg, #f8c41a, #f09a07);
+  box-shadow: 0 0 8px rgba(250, 180, 30, 0.6);
   transition: width 0.25s ease-out;
 }
 </style>

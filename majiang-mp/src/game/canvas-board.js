@@ -142,9 +142,15 @@ export function createBoardRenderer(ctx, atlas, faceFor) {
           const c = Math.cos(-spin * DEG), s = Math.sin(-spin * DEG);
           [dx, dy] = [dx * c - dy * s, dx * s + dy * c];
         }
-        // A leaning tile covers less ground than its upright box.
-        const shrink = Math.cos(pose.lean * DEG);
-        if (Math.abs(dx) <= box.w * Math.max(0.35, shrink) / 2 && Math.abs(dy) <= box.h / 2) return t;
+        /* Tilting a tile shortens it, it does not narrow it. Measured off the
+         * pose atlas, the drawn shell keeps a constant width at every angle
+         * while its height falls from 192 to 156 cell pixels between 0 and 70
+         * degrees - close to a quadratic. Shrinking the width by cos(lean), as
+         * this used to, left a 65-degree leaner with a hit box 40% of the tile
+         * the player can see, so taps on its sides fell through to whatever was
+         * underneath. */
+        const tilt = pose.lean / 70;
+        if (Math.abs(dx) <= box.w / 2 && Math.abs(dy) <= box.h * (1 - 0.19 * tilt * tilt) / 2) return t;
       }
       return null;
     },

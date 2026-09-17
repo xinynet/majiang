@@ -233,6 +233,8 @@ const faceSrc = tile => '/static/tiles-face/' + faceKey(tile.type) + '.png';
 
 let game = null, renderer = null, host = null, metrics = null;
 let boardSize = { width: 0, height: 0 };
+// Where the board sits on screen, for turning a touch into a board coordinate.
+let boardRect = { left: 0, top: 0 };
 let running = false, clockTimer = null, lastFrame = 0;
 let handImage = null, dealStart = 0, dealLength = 1;
 const paused = ref(false);
@@ -387,11 +389,24 @@ function exitToHome() {
   });
 }
 
+/* Turning a touch into a board coordinate.
+ *
+ * The old `canvas-id` canvas put canvas-relative `x`/`y` on every touch, but a
+ * <canvas type="2d"> does not: it hands back the standard viewport fields, so
+ * `clientY` is measured from the top of the screen and includes the status bar,
+ * the top bar and the level strip above the board. Feeding that straight to the
+ * hit test aimed every tap roughly 150px below where the player pressed, which
+ * is why tiles so often did not respond - and why the ones that did were the
+ * wrong ones. `boardRect` is the board's own position, measured with the canvas
+ * itself, and is what puts the tap back where it belongs. */
 function onTouch(e) {
   const p = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
   if (!p || !renderer || !metrics || game.state.dealing || paused.value || isWon.value || isLost.value) return;
   let x = p.x, y = p.y;
-  if (x === undefined) { x = p.clientX ?? p.pageX; y = p.clientY ?? p.pageY; }
+  if (x === undefined) {
+    x = (p.clientX ?? p.pageX ?? 0) - boardRect.left;
+    y = (p.clientY ?? p.pageY ?? 0) - boardRect.top;
+  }
   const hit = renderer.pick(ordered(), metrics, x, y);
   if (hit) game.pick(hit.id);
 }
@@ -492,6 +507,10 @@ function start(level) {
 
 onMounted(async () => {
   layoutTopBar();
+  // The top bar pads itself by the status-bar height, which shrinks the board
+  // below it. Let that land before measuring, or the pile is laid out for a
+  // board taller than the one it is drawn into.
+  await nextTick();
   const pages = getCurrentPages();
   const cur = pages[pages.length - 1];
   const startLevel = (cur && cur.options && cur.options.level) ? parseInt(cur.options.level) : (gameState.currentLevel || 2);
@@ -506,17 +525,21 @@ onMounted(async () => {
   const unit = host.measureUnitScale();
   if (Math.abs(dpr / unit - 1) > 0.01) host.ctx.scale(dpr / unit, dpr / unit);
   boardSize = { width, height };
+  boardRect = { left: found.left || 0, top: found.top || 0 };
 
   game = createGame({ motion: TileMotion, emit: createEmitter({ onEvent }) });
 
   // 初始化玩家道具数
   game.state.tools = { ...gameState.tools };
 
-  const atlas = await host.loadImage('/static/tile-poses/shells.png');
-  // A missing hand must not cost us the deal, so it is loaded alongside.
+  /* Started before the atlas is awaited, not after, so the two load together.
+   * Queued behind the atlas it was still arriving when the deal began, and the
+   * hands missed the first stroke of the very first round after a cold start.
+   * It is deliberately not awaited: a missing hand must not cost us the deal. */
   host.loadImage('/static/hands/right-hand-long.png')
     .then(img => { handImage = img; })
     .catch(() => {});
+  const atlas = await host.loadImage('/static/tile-poses/shells.png');
   const faces = new Map(), pending = new Set();
   const faceFor = type => {
     const key = faceKey(type);

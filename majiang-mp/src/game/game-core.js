@@ -51,14 +51,17 @@ export const ROUND_SECONDS = 600;
 /* How long the deal takes. The last tile leaves the stack at DEAL_STAGGER and
  * then has to fall, tip over and stop bouncing; the leaning tiles rotate down
  * slowly enough that they, not the stagger, set the tail. Measured across
- * levels 1-20 the pile is at rest by 1.87s, so DEAL_DURATION - when the board
- * unlocks, the clock starts and the hands withdraw - sits just past that, and
- * the whole deal still lands inside two seconds. Past that the wait before
- * play starts to drag. Re-measure with the Node regression in the
- * animation-tuning skill after changing any of these three. */
-const DEAL_STAGGER = 450, DEAL_DURATION = 1900;
-// Drop height in tile units. Lower means a quicker fall: gravity is 9/s².
-const DEAL_HEIGHT = 1.6;
+ * levels 1-20 the pile is at rest by 3.22s, so DEAL_DURATION - when the board
+ * unlocks, the clock starts and the hands withdraw - sits just past that.
+ *
+ * The three move together. DEAL_DURATION is also the window the shuffling hands
+ * are sampled over, so it alone decides how fast they move; stretching it
+ * without stretching DEAL_STAGGER would leave the hands sweeping over a pile
+ * that had already come to rest. Re-measure with the Node regression in the
+ * animation-tuning skill after changing any of them. */
+const DEAL_STAGGER = 1800, DEAL_DURATION = 3300;
+// Drop height in tile units. Higher means a longer, more weighted fall: gravity is 9/s².
+const DEAL_HEIGHT = 2.2;
 const TOOL_LABEL = { clear: '消除', shuffle: '洗牌', undo: '翻牌', magnet: '磁铁' };
 
 function shuffleWith(rnd, list) {

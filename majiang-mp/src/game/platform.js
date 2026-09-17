@@ -103,17 +103,23 @@ export function canvasHost(canvas) {
   };
 }
 
-function queryCanvas(selector, ctxScope) {
+/* `rect` comes back alongside `size` because a <canvas type="2d"> hands touch
+ * events plain viewport coordinates, not canvas-relative ones, so the caller
+ * needs the board's position on screen to convert them. */
+export function queryCanvas(selector, ctxScope) {
   return new Promise(resolve => {
-    uni.createSelectorQuery().in(ctxScope).select(selector).fields({ node: true, size: true }).exec(res => {
+    uni.createSelectorQuery().in(ctxScope).select(selector).fields({ node: true, size: true, rect: true }).exec(res => {
       const found = res && res[0];
-      if (found && found.node) return resolve({ canvas: found.node, width: found.width, height: found.height });
+      if (found && found.node) {
+        return resolve({ canvas: found.node, width: found.width, height: found.height,
+                         left: found.left || 0, top: found.top || 0 });
+      }
       // H5 builds hand back only a size, so reach for the element itself.
       const el = typeof document !== 'undefined' && document.querySelector(selector);
       if (el) {
         const inner = el.tagName === 'UNI-CANVAS' ? el.querySelector('canvas') : el;
         const box = el.getBoundingClientRect();
-        return resolve({ canvas: inner || el, width: box.width, height: box.height });
+        return resolve({ canvas: inner || el, width: box.width, height: box.height, left: box.left, top: box.top });
       }
       resolve(null);
     });
@@ -124,12 +130,24 @@ function queryCanvas(selector, ctxScope) {
  *
  * The board is a flex child, so the first query can land before layout has given
  * it a size; laying the pile out against that would pack every tile into a
- * corner. Retry until the element reports a real box. */
-export async function resolveCanvas(selector, ctxScope, tries = 12) {
+ * corner. Retry until the element reports a real box.
+ *
+ * A box that is merely non-zero is not enough. The top bar pads itself by the
+ * status-bar height once the page has measured the system capsule, and that
+ * shrinks the board underneath it - on this device by 47px out of 544. A layout
+ * built against the taller box is drawn into a shorter canvas, so the pile comes
+ * out squashed and every hit test is off by a growing amount down the screen.
+ * Waiting for two consecutive identical measurements means the caller only ever
+ * sees the box the board settles at. */
+export async function resolveCanvas(selector, ctxScope, tries = 20) {
+  let last = null;
   for (let i = 0; i < tries; i++) {
     const found = await queryCanvas(selector, ctxScope);
-    if (found && found.width > 80 && found.height > 80) return found;
+    if (found && found.width > 80 && found.height > 80) {
+      if (last && last.width === found.width && last.height === found.height) return found;
+      last = found;
+    }
     await new Promise(r => setTimeout(r, 60));
   }
-  return queryCanvas(selector, ctxScope);
+  return last || queryCanvas(selector, ctxScope);
 }
