@@ -15,22 +15,34 @@
         "navigationStyle": "custom",
         "disableScroll": true
       }
+    }
+  ],
+  "subPackages": [
+    {
+      "root": "pkg-game",
+      "pages": [
+        {
+          "path": "pages/game/game",
+          "style": {
+            "navigationBarTitleText": "趣味麻将碰",
+            "navigationStyle": "custom",
+            "disableScroll": true
+          }
+        }
+      ]
     },
     {
-      "path": "pages/game/game",
-      "style": {
-        "navigationBarTitleText": "趣味麻将碰",
-        "navigationStyle": "custom",
-        "disableScroll": true
-      }
-    },
-    {
-      "path": "pages/cards/cards",
-      "style": {
-        "navigationBarTitleText": "冬日集卡",
-        "navigationStyle": "custom",
-        "disableScroll": true
-      }
+      "root": "pkg-cards",
+      "pages": [
+        {
+          "path": "pages/cards/cards",
+          "style": {
+            "navigationBarTitleText": "冬日集卡",
+            "navigationStyle": "custom",
+            "disableScroll": true
+          }
+        }
+      ]
     }
   ],
   "globalStyle": {

@@ -1,7 +1,16 @@
 <template>
   <view class="home-container">
-    <!-- 高清主页全景底图 (1260x2800) -->
-    <image class="home-bg" src="/static/ui/bg_home.jpg" mode="scaleToFill" />
+    <!-- 高清主页全景底图 (1260x2800)。切成 5 条是为了让每个资源文件都低于 200K
+         （微信代码质量扫描的「图片和音频资源不应超过200K」），整图单文件到不了这个
+         体积又不能降质——底图里烤着所有按钮文字。切片是无损的：总字节数不变，
+         flex 均分保证条与条之间不会因为百分比取整露出缝。 -->
+    <view class="home-bg">
+      <image class="home-bg-slice" src="/static/ui/bg_home_1.jpg" mode="scaleToFill" />
+      <image class="home-bg-slice" src="/static/ui/bg_home_2.jpg" mode="scaleToFill" />
+      <image class="home-bg-slice" src="/static/ui/bg_home_3.jpg" mode="scaleToFill" />
+      <image class="home-bg-slice" src="/static/ui/bg_home_4.jpg" mode="scaleToFill" />
+      <image class="home-bg-slice" src="/static/ui/bg_home_5.jpg" mode="scaleToFill" />
+    </view>
 
     <!-- 动态数据覆盖层 (仅在数值改变时无缝覆盖，pointer-events: none，0重影) -->
     <!-- 1. 金币数值动态层 (仅在金币数发生变动大于0时覆盖) -->
@@ -61,7 +70,7 @@
     <view class="modal-overlay" v-if="modals.luckyBag" @tap.self="closeLuckyModal">
       <view class="lucky-bag-dialog animate-pop">
         <view class="lucky-header-box">
-          <image class="lucky-header-art" src="/static/ui/lucky_chest_header.png" mode="aspectFit" />
+          <image class="lucky-header-art" src="/static/ui/lucky_chest_header.jpg" mode="aspectFit" />
           <view class="modal-close-circle" @tap="closeLuckyModal">✕</view>
         </view>
         
@@ -69,7 +78,7 @@
           <view class="lucky-items-row">
             <view class="lucky-item-col">
               <view class="lucky-item-square">
-                <image class="lucky-item-img" src="/static/icons/shop_tool_undo.png" mode="aspectFit" />
+                <image class="lucky-item-img" src="/static/icons/shop_tool_undo.jpg" mode="aspectFit" />
                 <view class="lucky-qty-badge">x1</view>
               </view>
               <text class="lucky-name-label">翻牌</text>
@@ -78,7 +87,7 @@
 
             <view class="lucky-item-col">
               <view class="lucky-item-square">
-                <image class="lucky-item-img" src="/static/icons/shop_tool_clear.png" mode="aspectFit" />
+                <image class="lucky-item-img" src="/static/icons/shop_tool_clear.jpg" mode="aspectFit" />
                 <view class="lucky-qty-badge">x1</view>
               </view>
               <text class="lucky-name-label">消除</text>
@@ -87,7 +96,7 @@
 
             <view class="lucky-item-col">
               <view class="lucky-item-square">
-                <image class="lucky-item-img" src="/static/icons/shop_tool_time.png" mode="aspectFit" />
+                <image class="lucky-item-img" src="/static/icons/shop_tool_time.jpg" mode="aspectFit" />
                 <view class="lucky-qty-badge">x1</view>
               </view>
               <text class="lucky-name-label">加时</text>
@@ -96,7 +105,7 @@
 
             <view class="lucky-item-col">
               <view class="lucky-item-square">
-                <image class="lucky-item-img" src="/static/icons/shop_tool_shuffle.png" mode="aspectFit" />
+                <image class="lucky-item-img" src="/static/icons/shop_tool_shuffle.jpg" mode="aspectFit" />
                 <view class="lucky-qty-badge">x1</view>
               </view>
               <text class="lucky-name-label">洗牌</text>
@@ -105,7 +114,7 @@
 
             <view class="lucky-item-col">
               <view class="lucky-item-square">
-                <image class="lucky-item-img" src="/static/ui/coin_sack_exact.png" mode="aspectFit" />
+                <image class="lucky-item-img" src="/static/ui/coin_sack_exact.jpg" mode="aspectFit" />
                 <view class="lucky-qty-badge">x100</view>
               </view>
               <text class="lucky-name-label">金币</text>
@@ -145,7 +154,7 @@
               <image class="bubble-coin-ico" src="/static/ui/icon_crown_coin.png" mode="aspectFit" />
               <text class="bubble-coin-val">{{ gameState.piggyBank.coins }}</text>
             </view>
-            <image class="piggy-hero-img" src="/static/ui/piggy_hero_exact.png" mode="aspectFit" />
+            <image class="piggy-hero-img" src="/static/ui/piggy_hero_exact.jpg" mode="aspectFit" />
           </view>
         </view>
 
@@ -175,8 +184,8 @@
         <scroll-view class="tasks-scroll-list" scroll-y>
           <view class="task-card-row" v-for="(t, i) in currentTaskList" :key="i">
             <view class="task-art-box">
-              <image v-if="t.rewardType === 'coins'" class="task-sack-img" src="/static/ui/coin_sack_exact.png" mode="aspectFit" />
-              <image v-else class="task-bulb-img" src="/static/icons/shop_tool_clear.png" mode="aspectFit" />
+              <image v-if="t.rewardType === 'coins'" class="task-sack-img" src="/static/ui/coin_sack_exact.jpg" mode="aspectFit" />
+              <image v-else class="task-bulb-img" src="/static/icons/shop_tool_clear.jpg" mode="aspectFit" />
             </view>
 
             <view class="task-info-col">
@@ -191,7 +200,7 @@
             <view class="task-action-col">
               <view class="task-reward-preview">
                 <image v-if="t.rewardType === 'coins'" class="reward-coin-ico" src="/static/ui/icon_crown_coin.png" mode="aspectFit" />
-                <image v-else class="reward-tool-ico" src="/static/icons/shop_tool_clear.png" mode="aspectFit" />
+                <image v-else class="reward-tool-ico" src="/static/icons/shop_tool_clear.jpg" mode="aspectFit" />
                 <text class="reward-type-val">x{{ t.rewardCount }}</text>
               </view>
               <button 
@@ -220,7 +229,7 @@
           <view class="shop-card cyan-card">
             <view class="shop-card-header">金币</view>
             <view class="shop-card-body">
-              <image class="shop-bag-img" src="/static/icons/shop_coins_bag.png" mode="aspectFit" />
+              <image class="shop-bag-img" src="/static/icons/shop_coins_bag.jpg" mode="aspectFit" />
               <text class="shop-qty-lbl">x100</text>
               <view class="shop-free-btn" @tap="buyCoinsWithAd">
                 <image class="btn-cam-ico" src="/static/icons/icon_video_camera.png" mode="aspectFit" />
@@ -358,11 +367,11 @@ const currentTaskList = computed(() => {
 
 // 商城商品列表
 const shopItems = [
-  { id: 'undo', name: '翻牌', icon: 'shop_tool_undo.png', count: 1, price: 100 },
-  { id: 'clear', name: '消除', icon: 'shop_tool_clear.png', count: 2, price: 100 },
-  { id: 'magnet', name: '磁铁', icon: 'shop_tool_magnet.png', count: 1, price: 300 },
-  { id: 'shuffle', name: '洗牌', icon: 'shop_tool_shuffle.png', count: 1, price: 300 },
-  { id: 'time', name: '加时', icon: 'shop_tool_time.png', count: 2, price: 100 }
+  { id: 'undo', name: '翻牌', icon: 'shop_tool_undo.jpg', count: 1, price: 100 },
+  { id: 'clear', name: '消除', icon: 'shop_tool_clear.jpg', count: 2, price: 100 },
+  { id: 'magnet', name: '磁铁', icon: 'shop_tool_magnet.jpg', count: 1, price: 300 },
+  { id: 'shuffle', name: '洗牌', icon: 'shop_tool_shuffle.jpg', count: 1, price: 300 },
+  { id: 'time', name: '加时', icon: 'shop_tool_time.jpg', count: 2, price: 100 }
 ];
 
 // 广告模拟状态
@@ -459,7 +468,7 @@ function openDailyChallenge() {
     cancelText: '稍后再来',
     success: (res) => {
       if (res.confirm) {
-        uni.navigateTo({ url: '/pages/game/game?level=' + gameState.currentLevel + '&mode=challenge' });
+        uni.navigateTo({ url: '/pkg-game/pages/game/game?level=' + gameState.currentLevel + '&mode=challenge' });
       }
     }
   });
@@ -470,7 +479,7 @@ function openThemeModal() {
 }
 
 function gotoCardsPage() {
-  uni.navigateTo({ url: '/pages/cards/cards' });
+  uni.navigateTo({ url: '/pkg-cards/pages/cards/cards' });
 }
 
 function openLevelChest() {
@@ -564,7 +573,7 @@ function handleStartGame() {
     gameState.stamina--;
   }
   uni.navigateTo({
-    url: '/pages/game/game?level=' + gameState.currentLevel
+    url: '/pkg-game/pages/game/game?level=' + gameState.currentLevel
   });
 }
 
@@ -589,6 +598,15 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* flex: 1 让 5 条精确均分容器高度，不用百分比，避免取整产生缝隙 */
+.home-bg-slice {
+  flex: 1;
+  width: 100%;
+  display: block;
 }
 
 /* ================== 动态数据覆盖层 (仅用于动态变化覆盖) ================== */

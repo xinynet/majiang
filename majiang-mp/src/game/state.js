@@ -27,7 +27,7 @@ const DEFAULT_STATE = {
       { id: 'clear', name: '消除', count: 1, icon: 'tool-clear.png' },
       { id: 'time', name: '加时', count: 1, icon: 'tool-time.png' },
       { id: 'shuffle', name: '洗牌', count: 1, icon: 'tool-shuffle.png' },
-      { id: 'coins', name: '金币', count: 100, icon: 'coin_sack.png' }
+      { id: 'coins', name: '金币', count: 100, icon: 'coin_sack.jpg' }
     ]
   },
   dailyTasks: [
@@ -45,15 +45,15 @@ const DEFAULT_STATE = {
     { id: 'long_card9', title: '卡册大满贯', desc: '集齐9套冬日主题卡册', current: 0, target: 9, rewardType: 'coins', rewardCount: 1000, claimed: false }
   ],
   cardsAlbum: [
-    { id: 'hotpot', name: '热辣火锅', image: 'card_hotpot.png', count: 0, target: 9, chestCount: 1 },
-    { id: 'snowman', name: '欢快雪人', image: 'card_snowman.png', count: 0, target: 9, chestCount: 1 },
-    { id: 'ice_sculpture', name: '冰雕艺术', image: 'card_ice_sculpture.png', count: 0, target: 9, chestCount: 1 },
-    { id: 'winter_glove', name: '温暖冬日', image: 'card_winter_glove.png', count: 0, target: 9, chestCount: 1 },
-    { id: 'candied_haws', name: '冰糖葫芦', image: 'card_candied_haws.png', count: 0, target: 9, chestCount: 1 },
-    { id: 'sweet_potato', name: '暖心红薯', image: 'card_sweet_potato.png', count: 0, target: 9, chestCount: 1 },
-    { id: 'tangerines', name: '甜甜蜜蜜', image: 'card_tangerines.png', count: 0, target: 9, chestCount: 1 },
-    { id: 'sleigh', name: '华丽雪橇', image: 'card_sleigh.png', count: 0, target: 9, chestCount: 1 },
-    { id: 'arctic_pet', name: '冰城萌宠', image: 'card_arctic_pet.png', count: 0, target: 9, chestCount: 1 }
+    { id: 'hotpot', name: '热辣火锅', image: 'card_hotpot.jpg', count: 0, target: 9, chestCount: 1 },
+    { id: 'snowman', name: '欢快雪人', image: 'card_snowman.jpg', count: 0, target: 9, chestCount: 1 },
+    { id: 'ice_sculpture', name: '冰雕艺术', image: 'card_ice_sculpture.jpg', count: 0, target: 9, chestCount: 1 },
+    { id: 'winter_glove', name: '温暖冬日', image: 'card_winter_glove.jpg', count: 0, target: 9, chestCount: 1 },
+    { id: 'candied_haws', name: '冰糖葫芦', image: 'card_candied_haws.jpg', count: 0, target: 9, chestCount: 1 },
+    { id: 'sweet_potato', name: '暖心红薯', image: 'card_sweet_potato.jpg', count: 0, target: 9, chestCount: 1 },
+    { id: 'tangerines', name: '甜甜蜜蜜', image: 'card_tangerines.jpg', count: 0, target: 9, chestCount: 1 },
+    { id: 'sleigh', name: '华丽雪橇', image: 'card_sleigh.jpg', count: 0, target: 9, chestCount: 1 },
+    { id: 'arctic_pet', name: '冰城萌宠', image: 'card_arctic_pet.jpg', count: 0, target: 9, chestCount: 1 }
   ],
   settings: {
     sound: true,
