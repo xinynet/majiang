@@ -8,3 +8,5 @@ dist/
 unpackage/
 mp-tools/static-out/
 mp-tools/node_modules/
+mp-tools/fit200/
+mp-tools/subpkg-check/
