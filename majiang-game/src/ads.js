@@ -31,6 +31,8 @@
  *    里把它加进 request 合法域名。没配的话 `wx.request` 会直接失败，
  *    客户端会安静地退回缓存/默认配置（不会白屏，但后台就管不着它了）。
  *
+ * 后台的地址解析、超时、缓存降级都在 `backend.js`（每日一关也用同一套）。
+ *
  * ## 浏览器预览里为什么永远拉不到后台
  *
  * 预览垫片**有** `wx.request`（也有 `createRewardedVideoAd`），但它会把请求重写到
@@ -50,13 +52,9 @@ const PLACEMENTS = {
   cardsDetail: '集卡 · 卡片详情补碎片',
 };
 
-/* 运营后台地址。开发期指向本机起的 server/；上线换成 https 域名并在小游戏后台配白名单。
- * 调试时也可以在控制台 `wx.setStorageSync('majiang_api_base', 'http://192.168.1.5:3000')`
- * 临时指向另一台机器，省得改代码重编。 */
-const API_BASE = 'http://localhost:3000';
-const API_BASE_KEY = 'majiang_api_base';
+const { storage, getJSON, post } = require('./backend.js');
+
 const CACHE_KEY = 'majiang_ads_config_v1';
-const REQUEST_TIMEOUT = 4000;
 
 /* 兜底配置：后台连不上时用它。默认走本地模拟——宁可不投放，也不能在没配广告位的情况下
  * 让玩家点了没反应。 */
@@ -75,76 +73,27 @@ let lastShownAt = 0;
 /** adUnitId -> { ad, pending }，见文件头「同一个广告位只能有一个实例」。 */
 const instances = new Map();
 
-function storage(key, value) {
-  try {
-    if (value === undefined) return wx.getStorageSync(key);
-    wx.setStorageSync(key, value);
-  } catch (e) { /* 存储满了/被禁用都不该影响广告 */ }
-  return undefined;
-}
-
-function apiBase() {
-  return storage(API_BASE_KEY) || API_BASE;
-}
-
 /** 拉后台配置。永远不 reject——广告配置拉不到只该降级，不该让启动流程挂掉。 */
 function init() {
   const cached = storage(CACHE_KEY);
   if (cached && typeof cached === 'object') config = { ...FALLBACK, ...cached };
 
   return new Promise((resolve) => {
-    if (typeof wx === 'undefined' || typeof wx.request !== 'function') {
-      /* 浏览器预览的 wx 垫片不一定实现 request。这不是错误，但要让人知道
-       * 「现在跑的是本地配置，后台改了不会生效」，否则会对着后台干瞪眼。 */
-      console.log('[ads] 当前运行环境没有 wx.request，使用本地配置：provider=' + config.provider);
-      resolve(config);
-      return;
-    }
-    let done = false;
-    const finish = () => { if (!done) { done = true; resolve(config); } };
-    try {
-      wx.request({
-        url: apiBase() + '/api/ads',
-        method: 'GET',
-        timeout: REQUEST_TIMEOUT,
-        success: (res) => {
-          const body = res && res.data;
-          if (body && body.code === 0 && body.data && typeof body.data === 'object') {
-            config = { ...FALLBACK, ...body.data };
-            storage(CACHE_KEY, config);
-            console.log('[ads] 配置已更新', config.provider, config.enabled ? '开启' : '关闭');
-          } else {
-            /* 连上了但不是我们要的东西——最常见的是 404：浏览器预览的 wx 垫片会把
-             * 请求重写到预览服务自己的源上，于是永远拿不到后台。把状态码打出来，
-             * 否则这种情况和「后台没开」长得一模一样。 */
-            console.warn('[ads] 配置接口返回了非预期内容，继续用缓存/默认值。HTTP '
-              + ((res && res.statusCode) || '?') + ' from ' + apiBase());
-          }
-          finish();
-        },
-        fail: (e) => {
-          console.warn('[ads] 拉取配置失败，用缓存/默认值：', (e && e.errMsg) || e);
-          finish();
-        },
-      });
-    } catch (e) { finish(); }
-    setTimeout(finish, REQUEST_TIMEOUT + 500);   // 有些实现 fail 不回调，兜一层
+    getJSON('/api/ads', {
+      tag: 'ads',
+      onData: (data) => {
+        config = { ...FALLBACK, ...data };
+        storage(CACHE_KEY, config);
+        console.log('[ads] 配置已更新', config.provider, config.enabled ? '开启' : '关闭');
+      },
+      done: () => resolve(config),
+    });
   });
 }
 
 /** 上报一次广告事件。fire-and-forget，失败不重试也不提示——统计不该打扰玩家。 */
 function report(placement, result) {
-  if (typeof wx === 'undefined' || typeof wx.request !== 'function') return;
-  try {
-    wx.request({
-      url: apiBase() + '/api/stats',
-      method: 'POST',
-      timeout: REQUEST_TIMEOUT,
-      header: { 'Content-Type': 'application/json' },
-      data: { ad: true, placement, result },
-      fail: () => {},
-    });
-  } catch (e) { /* 同上 */ }
+  post('/api/stats', { ad: true, placement, result });
 }
 
 function placementOn(placement) {

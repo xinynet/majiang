@@ -183,6 +183,43 @@
       </div>
     </div>
     <div class="card">
+      <div class="card-title">
+        <span><i class="fa-solid fa-calendar-day"></i> 每日一关</span>
+        <span style="font-size: 12px; font-weight: 400; color: var(--muted);">弹窗上那几个数字都来自这里</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>今日主题</label>
+          <input type="text" id="daily-theme">
+        </div>
+        <div class="form-group">
+          <label>每日挑战次数</label>
+          <input type="number" id="daily-attemptsPerDay" min="1">
+        </div>
+        <div class="form-group">
+          <label>挑战人数 (展示用)</label>
+          <input type="number" id="daily-challengers" min="0">
+        </div>
+        <div class="form-group">
+          <label>通关人数 (展示用)</label>
+          <input type="number" id="daily-clearers" min="0">
+        </div>
+        <div class="form-group">
+          <label>星星倍数</label>
+          <input type="number" id="daily-starMultiplier" min="1">
+        </div>
+        <div class="form-group">
+          <label>通关金币奖励</label>
+          <input type="number" id="daily-coinReward" min="0">
+        </div>
+      </div>
+      <p class="form-tip" style="margin-top: 14px;">
+        <i class="fa-solid fa-triangle-exclamation" style="color: #f59e0b;"></i>
+        「星星倍数」和「金币奖励」是<strong>烤在弹窗美术里</strong>的（图上印着「3倍」「x200」）。
+        改了数值而没换美术，玩家看到的和拿到的就对不上——保存时会提醒。
+      </p>
+    </div>
+    <div class="card">
       <div class="card-title"><span><i class="fa-solid fa-layer-group"></i> 关卡难度梯度配置</span></div>
       <table>
         <thead>
@@ -271,6 +308,30 @@
       });
     }
 
+    /* 这两个数字是烤在弹窗美术里的，改了要连美术一起换，所以保存时比对一下。 */
+    const DAILY_ART = { starMultiplier: 3, coinReward: 200 };
+
+    function renderDaily(d) {
+      d = d || {};
+      document.getElementById("daily-theme").value = d.theme || "";
+      document.getElementById("daily-attemptsPerDay").value = d.attemptsPerDay || 1;
+      document.getElementById("daily-challengers").value = d.challengers || 0;
+      document.getElementById("daily-clearers").value = d.clearers || 0;
+      document.getElementById("daily-starMultiplier").value = d.starMultiplier || 1;
+      document.getElementById("daily-coinReward").value = d.coinReward || 0;
+    }
+
+    function collectDaily() {
+      return {
+        theme: document.getElementById("daily-theme").value.trim(),
+        attemptsPerDay: Number(document.getElementById("daily-attemptsPerDay").value) || 1,
+        challengers: Number(document.getElementById("daily-challengers").value) || 0,
+        clearers: Number(document.getElementById("daily-clearers").value) || 0,
+        starMultiplier: Number(document.getElementById("daily-starMultiplier").value) || 1,
+        coinReward: Number(document.getElementById("daily-coinReward").value) || 0
+      };
+    }
+
     function renderAds(ads) {
       ads = ads || {};
       document.getElementById("ads-enabled").value = String(ads.enabled !== false);
@@ -332,6 +393,7 @@
       document.getElementById("cfg-gmMode").value = String(!!cfg.gmMode);
       document.getElementById("cfg-announcement").value = cfg.announcement || "";
       renderAds(cfg.ads);
+      renderDaily(cfg.dailyLevel);
       const it = cfg.initialTools || {};
       document.getElementById("cfg-tool-clear").value = it.clear || 1;
       document.getElementById("cfg-tool-shuffle").value = it.shuffle || 1;
@@ -362,6 +424,7 @@
       currentConfig.gmMode = document.getElementById("cfg-gmMode").value === "true";
       currentConfig.announcement = document.getElementById("cfg-announcement").value;
       currentConfig.ads = collectAds();
+      currentConfig.dailyLevel = collectDaily();
       /* 选了正式投放却没填广告位 ID，客户端只能退回模拟——与其上线才发现，不如这里拦住。 */
       if (currentConfig.ads.enabled && currentConfig.ads.provider === "wechat"
           && !/^adunit-/.test(currentConfig.ads.rewardedVideoUnitId)) {
@@ -394,7 +457,12 @@
         });
         const json = await res.json();
         if (json.code === 0) {
-          showToast("运营配置保存成功并已即时生效！");
+          const d = currentConfig.dailyLevel;
+          const mismatch = d.starMultiplier !== DAILY_ART.starMultiplier || d.coinReward !== DAILY_ART.coinReward;
+          showToast(mismatch
+            ? "已保存，但每日一关的奖励(" + d.starMultiplier + "倍/" + d.coinReward
+              + ")和弹窗美术上印的(" + DAILY_ART.starMultiplier + "倍/" + DAILY_ART.coinReward + ")对不上，记得换美术"
+            : "运营配置保存成功并已即时生效！");
         } else {
           showToast("保存失败: " + json.msg);
         }

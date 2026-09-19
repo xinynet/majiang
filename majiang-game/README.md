@@ -20,7 +20,7 @@
 
 弹窗一览（玩法口径逐条对齐小程序，见 `src/modals.js` 文件头）：
 幸运礼包、金库银行（存钱罐）、每日/长线任务、商城、添加桌面、宝箱奖励、游戏设置、
-体力说明、道具补给、兑换屋、赛季商店、赛季收藏、卡片详情。
+体力说明、道具补给、兑换屋、赛季商店、赛季收藏、卡片详情、**每日一关**。
 
 **还没做的**：主题装扮（小程序侧本身也只是一条 toast，两边一致）。
 
@@ -45,7 +45,7 @@ node mp-tools/minigame-mcp.cjs logs --lines 50
 
 | 场景 | 可直开的弹窗 |
 |---|---|
-| `home#` | `settings` `lucky` `piggy` `tasks` `shop` `desktop` `chest` `ad` |
+| `home#` | `settings` `lucky` `piggy` `tasks` `shop` `desktop` `chest` `ad` `daily` |
 | `board#` | `refill` |
 | `cards#` | `detail` `exchange` `seasonShop` `collection` |
 
@@ -62,6 +62,8 @@ src/platform.js        game-core 事件的宿主实现（音效/震动/自绘 to
 src/store.js           全局状态与持久化（小程序版 state.js 去 vue 化）
 src/modals.js          弹窗层：遮罩/面板/开关/筹码/列表滚动 + 广告浮层的画法
 src/ads.js             广告投放：激励视频、后台配置、投放位开关、数据上报
+src/daily.js           每日一关：按本地日期重置的次数 + 后台下发的展示数值
+src/backend.js         运营后台的客户端（地址解析/超时/缓存降级，ads 与 daily 共用）
 src/home-layout.js     首页几何，与 mp-tools/home-layout.cjs 同步
 src/game/              玩法核心，从小程序原样搬来（含 cards-core.js：集卡纯逻辑）
 src/scenes/            四个场景
@@ -128,6 +130,7 @@ probe.js               旧的连通性探针，留作兜底
 node mp-tools/ads-check.cjs     # 广告链路回归：用 wx 桩把每条分支跑一遍
 node server/admin-check.cjs     # 后台页面自检：脚本语法、id、广告配置往返
 node mp-tools/minigame-lint.cjs # 只在微信里才会炸的写法（撞名全局 / ESM / 忘关调试开关）
+node mp-tools/daily-check.cjs   # 每日一关：跨天重置、扣次数、奖励与美术一致
 ```
 
 **上线前必须做的两件事**（代码里做不了）：
@@ -137,6 +140,26 @@ node mp-tools/minigame-lint.cjs # 只在微信里才会炸的写法（撞名全�
 2. 把 `src/ads.js` 顶部的 `API_BASE` 换成线上 **https** 地址，并在小游戏后台
    「开发设置 - 服务器域名」把它加进 request 合法域名。没配的话客户端会安静地
    退回缓存/默认配置——不会白屏，但后台就管不着它了。
+
+## 每日一关
+
+首页「每日挑战」点开的那个弹窗。整张面板是一张烤好的美术
+（`static/ui/daily_level.webp`，928x1259），代码只做三件事：往图上留白的槽位里填
+挑战人数 / 通关人数 / 剩余次数，在「前往挑战」和右上角 ✕ 上放热区，
+再在面板下方补一行「每日00:00刷新挑战次数」。槽位坐标是相对**美术自身**宽高的百分比
+（`modals.js` 的 `DAILY_SLOTS`），换美术就要重量。
+
+- **次数**按本地日期跨 00:00 重置（`src/daily.js`）。用本地日期而不是服务器时间：
+  这游戏没有账号体系，存档就在本机，拿服务器时间反而会出现「玩家改了时区、次数忽然回不来」。
+- **奖励**是星星 3 倍 + 金币 200，和美术上印的一致。基础结算按 1 倍发，差额由
+  `store.js` 的 `dailyChallengeBonus()` 补。
+- **数值都在后台**（`server/` 的「每日一关」卡片 → `/api/daily`）：主题、两个人数、
+  每日次数、星星倍数、金币。倍数和金币是烤在图里的，后台改了要连美术一起换——
+  后台保存时会提醒，`mp-tools/daily-check.cjs` 也会断言两边一致。
+
+```bash
+node mp-tools/daily-check.cjs    # 跨天重置 / 扣次数 / 奖励与美术一致 / 槽位在画面内
+```
 
 ## 牌桌背景的几何
 

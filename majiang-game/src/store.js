@@ -57,6 +57,9 @@ const DEFAULT_STATE = {
   currentLevel: 2,
   theme: 'meadow',
   desktopRewardClaimed: false,
+  /* 每日一关的本地状态：date 是上次发次数的本地日期（YYYY-MM-DD），left 是今天还剩几次。
+   * 跨天补次数的逻辑在 src/daily.js，不在这里——那边是纯函数，能单测。 */
+  dailyLevel: { date: '', left: 1 },
   levelChest: { current: 1, target: 5 },
   starChest: { current: 3, target: 500 },
   piggyBank: { coins: 25, minClaim: 300, maxCapacity: 600 },
@@ -362,6 +365,26 @@ function spendCoins(n) {
   return false;
 }
 
+/* 每日一关的额外奖励。
+ *
+ * 弹窗美术上印死了「星星 3 倍」和「金币 x200」，所以这里按**补差额**的方式加：
+ * winLevelAction 已经按 1 倍发过一份星星了，这里只补 (倍数-1) 那部分，
+ * 金币则是额外的一笔。两个数都从后台下发（server 的 dailyLevel），
+ * 改数值要连美术一起换，否则玩家看到的和拿到的对不上。 */
+function dailyChallengeBonus(matchTriples, starMultiplier, coins) {
+  const base = Math.max(1, matchTriples);
+  const mult = Number.isFinite(starMultiplier) && starMultiplier > 1 ? starMultiplier : 1;
+  const extraStars = Math.round(base * (mult - 1));
+  if (extraStars > 0) {
+    gameState.stars += extraStars;
+    gameState.starChest.current = Math.min(gameState.starChest.target,
+      gameState.starChest.current + extraStars);
+  }
+  const bonusCoins = Number.isFinite(coins) && coins > 0 ? Math.floor(coins) : 0;
+  if (bonusCoins > 0) addCoins(bonusCoins);
+  return { extraStars, coins: bonusCoins };
+}
+
 function addTool(tool, count = 1) {
   if (!gameState.tools) gameState.tools = {};
   gameState.tools[tool] = (gameState.tools[tool] || 0) + count;
@@ -408,4 +431,4 @@ function winLevelAction(level, matchTriples = 0, multiplier = 1) {
   });
 }
 
-module.exports = { saveNow, startGlobalTimers, consumeStamina, refundStamina, formatSeconds, formatLongSeconds, addCoins, spendCoins, addTool, useTool, winLevelAction, revision, gameState };
+module.exports = { saveNow, startGlobalTimers, consumeStamina, refundStamina, formatSeconds, formatLongSeconds, addCoins, spendCoins, addTool, useTool, winLevelAction, dailyChallengeBonus, revision, gameState };

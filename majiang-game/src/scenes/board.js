@@ -14,7 +14,8 @@ const { createBoardRenderer } = require('../game/canvas-board.js');
 const { TileMotion } = require('../game/tile-motion.js');
 const { drawShuffleHands } = require('../game/shuffle-hands.js');
 const { canvasHost, createEmitter, toast } = require('../platform.js');
-const { gameState, winLevelAction, refundStamina, formatSeconds } = require('../store.js');
+const { gameState, winLevelAction, dailyChallengeBonus, refundStamina, formatSeconds } = require('../store.js');
+const daily = require('../daily.js');
 const { createModals } = require('../modals.js');
 const { viewport } = require('../screen.js');
 const { replaceScene } = require('../app.js');
@@ -150,7 +151,14 @@ function createBoardScene(homeSceneFactory, debugModal) {
     if (name === 'won') {
       stopClock();
       phase = 'won';
-      winLevelAction(level, game.state.score, challenge ? 2 : 1);
+      /* 每日一关走自己的奖励口径（星星 3 倍 + 金币 200，见弹窗美术），
+       * 所以基础结算按 1 倍发，再补上差额；普通关卡还是老样子。 */
+      winLevelAction(level, game.state.score, 1);
+      if (challenge) {
+        const cfg = daily.current();
+        const got = dailyChallengeBonus(game.state.score, cfg.starMultiplier, cfg.coinReward);
+        toast('每日一关：星星 x' + cfg.starMultiplier + '，金币 +' + got.coins);
+      }
       pushToolsToGlobal();
     }
     if (name === 'lost') {

@@ -40,6 +40,20 @@ const DEFAULT_CONFIG = {
   gmMode: false,
   allowRevive: true,
   reviveReward: { clearTray: 3, addSeconds: 120 },
+  /* 每日一关。弹窗上那几个数字全从这里下发：
+   *   - challengers / clearers 是给玩家看的「多少人挑战、多少人通关」，运营自己定；
+   *   - attemptsPerDay 是每天几次机会，客户端按本地日期 00:00 重置；
+   *   - starMultiplier / coinReward 必须和弹窗美术上印的「3倍 / x200」一致，
+   *     改了数值记得连美术一起换，否则玩家看到的和拿到的对不上。 */
+  dailyLevel: {
+    theme: '发财啦',
+    challengers: 94540,
+    clearers: 428,
+    attemptsPerDay: 1,
+    starMultiplier: 3,
+    coinReward: 200
+  },
+
   /* 广告投放。provider 决定客户端走哪条路：
    *   wechat —— 真实激励视频（wx.createRewardedVideoAd），需要先填广告位 ID；
    *   mock   —— 本地模拟浮层，开发预览和过审前用，绝不会真的请求广告。
@@ -194,6 +208,14 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  /* 每日一关的展示数值。和 /api/ads 一样是给客户端的精简接口。 */
+  if (pathname === '/api/daily' && req.method === 'GET') {
+    const daily = loadConfig().dailyLevel || DEFAULT_CONFIG.dailyLevel;
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ code: 0, data: daily, msg: 'success' }));
+    return;
+  }
+
   if (pathname === '/api/config/reset' && req.method === 'POST') {
     writeJson(CONFIG_FILE, DEFAULT_CONFIG);
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -286,5 +308,6 @@ server.listen(PORT, () => {
   console.log('游戏H5界面:   http://localhost:' + PORT + '/game');
   console.log('配置接口:     http://localhost:' + PORT + '/api/config');
   console.log('广告配置接口: http://localhost:' + PORT + '/api/ads   （客户端拉这个）');
+  console.log('每日一关接口: http://localhost:' + PORT + '/api/daily');
   console.log('==================================================');
 });

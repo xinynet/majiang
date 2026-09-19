@@ -36,6 +36,7 @@ const ART = {
   m_piggy_hero: 'static/ui/piggy_hero_exact.jpg',
   m_desktop_card: 'static/ui/desktop_modal_card.png',
   m_desktop_btn: 'static/ui/desktop_modal_btn.png',
+  m_daily: 'static/ui/daily_level.webp',
   m_coin_sack: 'static/ui/coin_sack_exact.jpg',
   m_crown_coin: 'static/ui/icon_crown_coin.png',
   m_cam: 'static/icons/icon_video_camera.png',
@@ -55,6 +56,18 @@ const ICON_KEY = {
   'shop_tool_time.jpg': 'm_tool_time',
   'shop_coins_bag.jpg': 'm_coins_bag',
   'coin_sack_exact.jpg': 'm_coin_sack',
+};
+
+/* 每日一关弹窗上那几块留白的位置，按**美术自身**的宽高取百分比。
+ * 是在 daily_level.webp（928x1259）上量的：图里已经印好了标题、今日主题、
+ * 「星星3倍 / 金币x200」和「前往挑战」，代码只往空槽里填数字、在按钮上放热区。
+ * 换美术就要重量这几个数——量的办法见 HANDOFF 的 R9。 */
+const DAILY_SLOTS = {
+  close: { x: 0.845, y: 0.05, w: 0.12, h: 0.11 },
+  challengers: { x: 0.32, y: 0.155, w: 0.17, h: 0.07 },
+  clearers: { x: 0.785, y: 0.155, w: 0.17, h: 0.07 },
+  attempts: { x: 0.565, y: 0.755, w: 0.165, h: 0.062 },
+  go: { x: 0.21, y: 0.822, w: 0.58, h: 0.10 },
 };
 
 /* 商城货架。和小程序 index.vue 的 shopItems 一字不差。 */
@@ -179,7 +192,7 @@ function wrapText(ctx, str, maxWidth, size) {
 /* ------------------------------------------------------------------ 弹窗管理器 */
 
 function createModals() {
-  /** null | 'settings' | 'lucky' | 'piggy' | 'tasks' | 'shop' | 'desktop' | 'chest' | 'confirm' | 'refill' | 'aux' */
+  /** null | 'settings' | 'lucky' | 'piggy' | 'tasks' | 'shop' | 'desktop' | 'chest' | 'confirm' | 'refill' | 'aux' | 'daily' */
   let active = null;
   let payload = {};
   let taskTab = 'daily';
@@ -701,6 +714,50 @@ function createModals() {
       btnText, () => onAction(close), { color: C.accent, dark: C.accentDark });
   }
 
+  /* 每日一关。整张弹窗是一张烤好的美术，代码只做三件事：
+   *   - 把三个数字填进图上留白的槽位（挑战人数 / 通关人数 / 剩余次数）；
+   *   - 在「前往挑战」和右上角 ✕ 上放热区；
+   *   - 在面板下方补一行「每日00:00刷新挑战次数」——这行不在美术里。
+   * payload: { config, attemptsLeft, onGo } —— 数值与动作都由 home.js 传进来，
+   * 这一层不碰存档，也不碰网络。 */
+  function drawDaily(ctx) {
+    const { config: cfg, attemptsLeft, onGo } = payload;
+    const art = img('m_daily');
+    const w = vw(88);
+    const h = art ? w * art.height / art.width : vh(60);
+    const box = { x: (viewport.W - w) / 2, y: (viewport.H - h) / 2 - vh(2), w, h };
+    const at = (slot) => ({
+      x: box.x + box.w * slot.x, y: box.y + box.h * slot.y,
+      w: box.w * slot.w, h: box.h * slot.h,
+    });
+
+    drawContain(ctx, art, box);
+    hit(box, () => {});                       // 面板吞掉点击
+
+    /* 两个「人数」是给玩家看的热闹，用美术上同一支绿色。 */
+    textIn(ctx, String(cfg.challengers), at(DAILY_SLOTS.challengers),
+      { color: '#2f9e44', weight: 'bold', size: box.h * 0.026 });
+    textIn(ctx, String(cfg.clearers), at(DAILY_SLOTS.clearers),
+      { color: '#2f9e44', weight: 'bold', size: box.h * 0.026 });
+    textIn(ctx, String(attemptsLeft), at(DAILY_SLOTS.attempts),
+      { color: '#8a4b12', weight: 'bold', size: box.h * 0.030 });
+
+    const go = at(DAILY_SLOTS.go);
+    hit(go, () => { close(); onGo(); });
+    /* 还有次数就在按钮角上点个红点——和首页那些入口一个意思：告诉玩家这里有东西可拿。 */
+    if (attemptsLeft > 0) {
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(go.x + go.w * 0.92, go.y + go.h * 0.12, go.h * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    hit(at(DAILY_SLOTS.close), close);
+
+    text(ctx, '每日00:00刷新挑战次数', box.x + box.w / 2, box.y + box.h + vh(2),
+      { color: '#fff', weight: 'bold', size: rem(1), stroke: 'rgba(20,32,28,.75)' });
+  }
+
   /** 模拟激励视频。真接广告要换成 wx.createRewardedVideoAd，回调位置就是 ad.cb。 */
   function drawAd(ctx) {
     ctx.fillStyle = 'rgba(0,0,0,.86)';
@@ -734,7 +791,7 @@ function createModals() {
   const DRAW = {
     settings: drawSettings, lucky: drawLucky, piggy: drawPiggy, tasks: drawTasks,
     shop: drawShop, desktop: drawDesktop, chest: drawChest, confirm: drawConfirm,
-    refill: drawRefill, aux: drawAux,
+    refill: drawRefill, aux: drawAux, daily: drawDaily,
   };
 
   /* 抽成普通函数而不是只挂在返回对象上：下面几个触摸处理器里原本写的是 `this.isOpen()`，

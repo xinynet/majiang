@@ -16,6 +16,7 @@ const {
   gameState, formatSeconds, formatLongSeconds, consumeStamina, startGlobalTimers, addCoins, addTool,
 } = require('../store.js');
 const { createModals } = require('../modals.js');
+const daily = require('../daily.js');
 const { viewport } = require('../screen.js');
 const { replaceScene } = require('../app.js');
 const { toast } = require('../platform.js');
@@ -75,6 +76,25 @@ function createHomeScene(makeBoardScene, makeCardsScene, debugModal) {
     replaceScene(makeBoardScene(), { level: gameState.currentLevel || 1 });
   }
 
+  /** 弹窗要的那三样：后台下发的展示数值、今天剩几次、点按钮干什么。 */
+  function dailyPayload() {
+    return { config: daily.current(), attemptsLeft: daily.attemptsLeft(), onGo: startDailyChallenge };
+  }
+
+  /* 每日一关的入口动作。三道门依次过：今天还有没有次数、体力够不够、然后才进对局。
+   * 次数先扣：进了对局再退出也算用掉一次，否则「进去看一眼就退」可以无限刷。 */
+  function startDailyChallenge() {
+    if (!daily.spend()) {
+      toast('今日挑战次数已用完，明天 00:00 刷新');
+      return;
+    }
+    if (!consumeStamina(1)) {
+      modals.staminaTip();
+      return;
+    }
+    replaceScene(makeBoardScene(), { level: gameState.currentLevel || 1, mode: 'challenge' });
+  }
+
   /* 领宝箱。口径同小程序 claimChest：未满不发奖（gmMode 放行）、领完把进度清零，
    * 否则宝箱会永远停在满格，而且每点一次白送一次。 */
   function claimChest(chest, reward) {
@@ -95,10 +115,9 @@ function createHomeScene(makeBoardScene, makeCardsScene, debugModal) {
       case 'btnStart': return startGame;
       case 'banner':
       case 'tileCards': return () => replaceScene(makeCardsScene());
-      case 'tileChallenge': return () => {
-        if (!consumeStamina(1)) { toast('体力不足，等体力恢复后再来'); return; }
-        replaceScene(makeBoardScene(), { level: gameState.currentLevel || 1, mode: 'challenge' });
-      };
+      /* 每日一关：先弹窗（人数、今日主题、奖励、剩余次数都在里面），
+       * 玩家点「前往挑战」才扣次数和体力。次数是本地按日期重置的，见 daily.js。 */
+      case 'tileChallenge': return () => modals.open('daily', dailyPayload());
       case 'chestLevel': return () => claimChest(gameState.levelChest, {
         title: '关卡宝箱已开启！', coins: 50,
         tool: 'clear', toolName: '消除', toolIcon: 'shop_tool_clear.jpg', toolCount: 1,
@@ -124,9 +143,11 @@ function createHomeScene(makeBoardScene, makeCardsScene, debugModal) {
       modals.close();
       startGlobalTimers();
       await Promise.all([loadImages(assetTable(sprites)), modals.preload()]);
+      daily.init();          // 不 await：拉不到就用缓存/兜底，别让首页等网络
       ready = true;
       /* 'ad' 不是弹窗而是播放态，3 秒就过去了；调试时让它自己续播，方便截图。 */
       if (debugModal === 'ad') { const loop = () => modals.playAd('debug', loop); loop(); }
+      else if (debugModal === 'daily') modals.open('daily', dailyPayload());
       else if (debugModal) modals.open(debugModal, DEBUG_CHEST_REWARD);
     },
 

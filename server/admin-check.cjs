@@ -117,5 +117,47 @@ console.log('\n[3] 广告配置：渲染进表单再收回来，要能原样往�
     '首行数据与完成率：' + first.replace(/<[^>]+>/g, ' ').trim());
 }
 
+console.log(String.fromCharCode(10) + '[5] 每日一关：渲染进表单再收回来');
+{
+  /* 复用上一节建好的沙箱不方便（它在块作用域里），这里重新跑一遍脚本。 */
+  const vm2 = require('vm');
+  const created = [];
+  const byId = {};
+  const makeEl = () => ({
+    value: '', innerText: '', innerHTML: '', checked: false, className: '', type: '',
+    dataset: {}, style: { cssText: '' }, children: [],
+    appendChild(x) { this.children.push(x); created.push(x); return x; },
+  });
+  const sandbox = {
+    document: {
+      getElementById: (id) => (byId[id] = byId[id] || makeEl()),
+      createElement: makeEl,
+      createTextNode: (t) => ({ text: t }),
+      querySelectorAll: (sel) => created.filter((e) => e.className === sel.replace(/^\./, '')),
+    },
+    window: {}, fetch: () => Promise.reject(new Error('自检不联网')),
+    setTimeout, console, Math, Number, String, JSON, confirm: () => false,
+  };
+  vm2.createContext(sandbox);
+  vm2.runInContext(script, sandbox);
+
+  const cfg = {
+    theme: '大丰收', attemptsPerDay: 2, challengers: 12345, clearers: 678,
+    starMultiplier: 3, coinReward: 200,
+  };
+  sandbox.renderDaily(cfg);
+  const back = sandbox.collectDaily();
+  ok(JSON.stringify(back) === JSON.stringify(cfg), '六个字段原样往返：' + JSON.stringify(back));
+
+  /* 客户端的兜底值要和后台默认值一致，否则拉不到后台时两边对不上。 */
+  const dailyJs = fs.readFileSync(path.join(__dirname, '..', 'majiang-game', 'src', 'daily.js'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, 'server.js'), 'utf8');
+  for (const key of ['attemptsPerDay', 'starMultiplier', 'coinReward']) {
+    const a = (dailyJs.match(new RegExp(key + ':\\s*(\\d+)')) || [])[1];
+    const b = (server.match(new RegExp(key + ':\\s*(\\d+)')) || [])[1];
+    ok(a !== undefined && a === b, `${key} 客户端兜底(${a}) == 后台默认(${b})`);
+  }
+}
+
 console.log('\n' + (fails ? `${fails} FAILED` : 'ALL PASS'));
 process.exit(fails ? 1 : 0);
