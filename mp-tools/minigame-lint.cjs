@@ -12,9 +12,12 @@
  * 而浏览器预览的打包器不注入这些名字，预览里跑得好好的——这类问题只有装进微信才暴露，
  * 反馈回路最长，所以值得用一个静态检查钉死。
  *
- * 查两类：
+ * 查三类：
  *   1. 模块顶层声明的标识符撞上运行时注入的全局（上面那件事）；
- *   2. ESM 语法（import / export）——小游戏运行时是 CommonJS，`import` 直接 SyntaxError。
+ *   2. ESM 语法（import / export）——小游戏运行时是 CommonJS，`import` 直接 SyntaxError；
+ *   3. 裸调用 `requestAnimationFrame`——模块作用域里它是 undefined，真机上
+ *      `TypeError: requestAnimationFrame is not a function`，同样只有装进微信才暴露。
+ *      要走 platform.js 的 raf()（从 GameGlobal / globalThis 上取，并有 setTimeout 兜底）。
  *
  * 运行：node mp-tools/minigame-lint.cjs
  */
@@ -90,7 +93,26 @@ for (const file of files) {
 }
 if (!esm) ok(true, '没有 import / export');
 
-console.log('\n[3] game.js 的调试开关必须是空的（提交前不能带着 DEBUG_SCENE 上线）');
+console.log('\n[3] 不得裸调用 requestAnimationFrame（模块作用域里它是 undefined）');
+{
+  let bare = 0;
+  for (const file of files) {
+    const rel = path.relative(path.join(__dirname, '..'), file).replace(/\\/g, '/');
+    /* platform.js 是唯一允许碰它的地方：raf() 就在那儿从全局对象上取。 */
+    if (rel.endsWith('src/platform.js')) continue;
+    const lines = fs.readFileSync(file, 'utf8').split('\n');
+    lines.forEach((line, i) => {
+      if (/^\s*\/[/*]/.test(line) || /^\s*\*/.test(line)) return;   // 注释里提到不算
+      if (/(?<![.\w])(request|cancel)AnimationFrame\s*\(/.test(line)) {
+        bare++;
+        ok(false, `${rel}:${i + 1} 裸调用帧接口，请改用 platform.js 的 raf()`);
+      }
+    });
+  }
+  if (!bare) ok(true, '没有裸调用');
+}
+
+console.log('\n[4] game.js 的调试开关必须是空的（提交前不能带着 DEBUG_SCENE 上线）');
 {
   const g = fs.readFileSync(path.join(ROOT, 'game.js'), 'utf8');
   const m = /const DEBUG_SCENE = '([^']*)'/.exec(g);

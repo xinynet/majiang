@@ -5,7 +5,7 @@
  * 画布本身与坐标系约定在 screen.js。
  */
 const { viewport } = require('./screen.js');
-const { toastLayer } = require('./platform.js');
+const { toastLayer, raf } = require('./platform.js');
 const { drawToast } = require('./ui.js');
 const { saveNow } = require('./store.js');
 
@@ -62,7 +62,7 @@ function bindInput() {
 }
 
 function frame(now) {
-  requestAnimationFrame(frame);
+  raf(frame);
   const dt = lastTime ? Math.min(0.05, (now - lastTime) / 1000) : 0;
   lastTime = now;
 
@@ -86,7 +86,7 @@ function startLoop() {
   if (running) return;
   running = true;
   bindInput();
-  requestAnimationFrame(frame);
+  raf(frame);
 }
 
 module.exports = { replaceScene, currentScene, startLoop };

@@ -10,6 +10,23 @@
  *     「布局未稳定导致量出错误尺寸」的问题，那套重试逻辑一并删掉。
  */
 
+/* 帧回调。模块里**不能**直接写裸的 `requestAnimationFrame(cb)`：
+ * 小游戏运行时把模块包在一个函数里执行，那个作用域里的 `requestAnimationFrame`
+ * 是 undefined（真机/开发者工具实测 `TypeError: requestAnimationFrame is not a function`，
+ * 而浏览器预览里它是真的，所以预览永远发现不了）。
+ * 要从全局对象上取——小游戏是 `GameGlobal`，浏览器预览是 `globalThis`。
+ * 两个都没有时退到 setTimeout，16ms ≈ 60fps：宁可掉帧，也不能整个循环起不来。
+ * 这是 `screen` 撞名那件事的同一类问题，见 src/screen.js 的文件头。 */
+const GLOBAL = (typeof GameGlobal !== 'undefined' && GameGlobal)
+  || (typeof globalThis !== 'undefined' && globalThis)
+  || {};
+
+function raf(cb) {
+  const fn = GLOBAL.requestAnimationFrame;
+  if (typeof fn === 'function') return fn.call(GLOBAL, cb);
+  return setTimeout(() => cb(Date.now()), 16);
+}
+
 const players = new Map();
 
 function playTone(freq) {
@@ -71,7 +88,7 @@ function canvasHost(canvas) {
       return c;
     },
     frame(cb) {
-      return requestAnimationFrame(cb);
+      return raf(cb);
     },
 
     /* 一个绘制单位占几个物理像素。
@@ -86,4 +103,4 @@ function canvasHost(canvas) {
   };
 }
 
-module.exports = { playTone, vibrate, toast, createEmitter, canvasHost, toastLayer };
+module.exports = { playTone, vibrate, toast, createEmitter, canvasHost, toastLayer, raf };

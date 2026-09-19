@@ -58,7 +58,7 @@ game.js                入口：场景工厂 + 帧循环启动
 src/screen.js          画布与坐标系，导出 viewport（为什么不叫 screen 见文件头注释）
 src/app.js             帧循环、场景切换、触摸派发
 src/ui.js              canvas UI 原语：素材、尺寸、绘制、命中测试
-src/platform.js        game-core 事件的宿主实现（音效/震动/自绘 toast/画布）
+src/platform.js        game-core 事件的宿主实现（音效/震动/自绘 toast/画布/帧回调 raf）
 src/store.js           全局状态与持久化（小程序版 state.js 去 vue 化）
 src/modals.js          弹窗层：遮罩/面板/开关/筹码/列表滚动 + 广告浮层的画法
 src/ads.js             广告投放：激励视频、后台配置、投放位开关、数据上报
@@ -86,14 +86,21 @@ probe.js               旧的连通性探针，留作兜底
 4. **canvas 没有事件冒泡。** 弹窗遮罩必须自己登记成热区把点击吞掉，否则玩家在结算界面
    点到的是下面的牌。绘制和命中测试共用同一个 rect 对象，绝不各算一套。
 
-5. **模块顶层不能用 `screen` 这种名字。** 小游戏运行时把每个模块包在一个函数里执行，
-   那个作用域里已经有一个 `screen`（浏览器风格的全局）。我们的 `src/screen.js` 顶层
-   写了 `const screen = {...}`，于是加载期就是
-   `SyntaxError: Identifier 'screen' has already been declared` → 这个模块注册不上 →
-   所有 `require('./screen.js')` 跟着报 `module 'src/screen.js' is not defined` →
-   整个游戏起不来。**浏览器预览的打包器不注入这些名字，预览里完全正常**，只有装进
-   开发者工具/真机才暴露。现在那个对象叫 `viewport`，并且有
-   `mp-tools/minigame-lint.cjs` 盯着这一类撞名。
+5. **模块作用域里的全局，和浏览器不是一回事。** 小游戏运行时把每个模块包在一个函数里
+   执行，那个作用域和浏览器全局对不上，两个方向都会咬人：
+
+   - **名字已经被占**：`src/screen.js` 顶层写 `const screen = {...}`，而那儿已经有一个
+     `screen`（浏览器风格的全局），于是加载期直接
+     `SyntaxError: Identifier 'screen' has already been declared` → 模块注册不上 →
+     所有 `require('./screen.js')` 报 `module 'src/screen.js' is not defined` → 游戏起不来。
+     现在那个对象叫 `viewport`。
+   - **名字根本不存在**：`requestAnimationFrame` 在模块作用域里是 undefined，
+     裸调用就是 `TypeError: requestAnimationFrame is not a function`，帧循环压根起不来。
+     要从全局对象上取（小游戏是 `GameGlobal`，预览是 `globalThis`），见 `platform.js`
+     的 `raf()`，并带 setTimeout 兜底。
+
+   两件事的共同点：**浏览器预览里全都正常**，只有装进开发者工具/真机才暴露。
+   所以有了 `mp-tools/minigame-lint.cjs` 专盯这一类。
 
 6. **没有 `scroll-view`，也没有 `switch`、`showModal`。** 任务/商城的长列表得自己接
    onTouchMove 累加偏移 + `ctx.clip()` 裁可视区，还要靠位移量区分「滑动」和「点击」

@@ -1404,3 +1404,24 @@ module 'src/screen.js' is not defined, require args is './src/screen.js'
   开发者工具把它写到 `User Data/<hash>/WeappLocalData/localstorage_*.json`，
   Node 可以直接读。**存档键出现 = 至少启动成功了。** 这次读出来是「没有」，
   与「加载期就崩」一致。
+
+## 追记：修完 `screen` 之后的第二发，同一个根因
+
+模块都加载起来了，紧接着是：
+
+```
+TypeError: requestAnimationFrame is not a function
+    at startLoop (app.js:90)
+```
+
+同一个根因的另一面：模块作用域里那个 `requestAnimationFrame` **是 undefined**。
+一个是「名字已经被占」（`screen`），一个是「名字根本不存在」（`requestAnimationFrame`），
+共同点是浏览器预览里两者都正常。
+
+改法：`platform.js` 里加了 `raf()`，从 `GameGlobal`（小游戏）/ `globalThis`（预览）上取，
+两个都没有就退到 `setTimeout(cb, 16)`——宁可掉帧，也不能整个帧循环起不来。
+`app.js` 的两处和 `canvasHost.frame()` 都改走它，lint 增加第 [3] 节禁止裸调用。
+
+另外这一轮确认了一件好事：**开发者工具里 `wx.request` 是通的**，日志里有
+`[ads] 配置已更新 mock 开启`——工具默认关闭域名校验，所以本机 `http://localhost:3000`
+的运营后台在工具里直接能连上。也就是说广告配置这条链路，在工具里是可以完整验的。
