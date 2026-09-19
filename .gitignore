@@ -14,3 +14,5 @@ mp-tools/subpkg-check/
 mp-tools/work/
 # 后台统计是运行期累积出来的数据，不是源码
 server/data/game-stats.json
+# 小游戏预览助手在游戏目录里写截图/配置，不能进仓库也不能进代码包
+majiang-game/.weixin-minigame-helper/

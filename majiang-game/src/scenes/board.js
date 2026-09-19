@@ -20,8 +20,20 @@ const { viewport } = require('../screen.js');
 const { replaceScene } = require('../app.js');
 const {
   img, loadImages, vw, vh, rem, text, textIn, roundRect,
-  drawContain, drawCover, hit, beginFrame, tap,
+  drawContain, drawFill, hit, beginFrame, tap,
 } = require('../ui.js');
+
+/* 野餐布（绿地 + 蓝白格）那条背景带的高度，按**屏宽**算。
+ *
+ * 小程序侧是 `.g-meadow { width: 100%; height: 200rpx }` + `mode="scaleToFill"`，
+ * 而 rpx 是按屏宽定义的（750rpx = 屏宽），所以这条带子在所有机型上都是
+ * 「屏宽的 200/750」高，蓝白格恒定落在屏幕顶部 8.9%~12.3% 那一段，
+ * 永远在「关卡/种类」那行上面。
+ *
+ * 这里原来写的是 drawCover 铺到 `viewport.H * 0.42`——按**屏高**取高度、还带裁切，
+ * 于是蓝白格的位置随机型比例上下漂：预览的机型里漂到 22%，开发者工具的机型里
+ * 漂到 27%，直接跑到状态行下面去了。改回和小程序同一条口径。 */
+const MEADOW_H_RATIO = 200 / 750;
 
 /* 四个道具位。price / desc 与小程序 openRefill() 里那串 if-else 逐项对齐。 */
 const TOOL_BAR = [
@@ -61,7 +73,10 @@ function createBoardScene(homeSceneFactory, debugModal) {
   function layout() {
     const topBarY = viewport.safeTop;
     const topBarH = vh(6);
-    const statusY = topBarY + topBarH;
+    const meadowH = viewport.W * MEADOW_H_RATIO;
+    /* 状态行压到野餐布下沿之下：小程序那边靠 flex 流自然排到这个位置，
+     * 这里没有流，就显式取两者的较大值——否则窄屏上蓝白格会盖住「关卡/种类」。 */
+    const statusY = Math.max(topBarY + topBarH, meadowH + vh(0.8));
     const statusH = vh(3.4);
     const dockH = vh(11);
     const dockY = viewport.H - viewport.safeBottom - dockH - vh(1);
@@ -394,7 +409,9 @@ function createBoardScene(homeSceneFactory, debugModal) {
       ctx.fillStyle = '#4e9c82';
       ctx.fillRect(0, 0, viewport.W, viewport.H);
       const meadow = img('meadow');
-      if (meadow) drawCover(ctx, meadow, { x: 0, y: 0, w: viewport.W, h: viewport.H * 0.42 });
+      /* 拉伸铺满（等价小程序的 scaleToFill），不要 cover——cover 会裁切，
+       * 裁多少取决于机型比例，蓝白格就会跟着漂。 */
+      if (meadow) drawFill(ctx, meadow, { x: 0, y: 0, w: viewport.W, h: viewport.W * MEADOW_H_RATIO });
 
       if (phase === 'error' || !game) {
         text(ctx, errorText || '加载中…', viewport.W / 2, viewport.H / 2, { size: rem(1.1) });
