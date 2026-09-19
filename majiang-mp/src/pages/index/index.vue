@@ -1,68 +1,132 @@
 <template>
   <view class="home-container">
-    <!-- 高清主页全景底图 (1260x2800)。切成 5 条是为了让每个资源文件都低于 200K
-         （微信代码质量扫描的「图片和音频资源不应超过200K」），整图单文件到不了这个
-         体积又不能降质——底图里烤着所有按钮文字。切片是无损的：总字节数不变，
-         flex 均分保证条与条之间不会因为百分比取整露出缝。 -->
+    <!-- ==================== 首页分层渲染 ====================
+
+         首页原本是「一整张烤死的位图」：按钮、图标、数字全画进同一张 1260x2800 的图里。
+         现在拆成三层：
+
+           第 1 层  bg_home.webp   纯风景背景，941x1672，66K
+           第 2 层  ui_*.webp      14 个带 alpha 的 UI 精灵，单个 7~60K
+           第 3 层  <text>         全部数值（金币 / 体力 / 宝箱 / 集卡 / 倒计时 / 关卡）
+
+         这么拆解决三件事：
+
+           · 体积。单个文件最大 59.8K，离微信「图片和音频资源不应超过200K」的红线很远；
+             主包里首页素材从 727K（旧 5 片切片 549K + 整幅 178K）降到 344K。
+             顺带把上一版那条「5 片各自缩放、边缘抗锯齿叠出来的白色接缝」彻底消掉了——
+             背景现在是单个 <image>，接缝按构造不存在。
+
+           · 合规。母版顶栏右侧带着一个仿微信胶囊（··· 与 ⊗）和一个仿游戏圈图标，
+             属于模仿系统 UI / 伪造平台入口。这两块**没有**抠进来，
+             右上角整块让给真正的微信胶囊。
+
+           · 数值。数字全部改成文字，不必再拿不透明色块去盖旧图上烤死的数字，
+             也就没有「盖不准露边」这回事了。
+
+         几何不是手写的：精灵盒子和数值槽位的百分比都由 mp-tools/home-layout.cjs 算出，
+         写进下面样式表里 AUTOGEN 标记之间那一段。改版只需重量母版坐标再跑一次
+         `node mp-tools/build-home-layers.cjs`。
+
+         精灵一律 mode="scaleToFill"，且盒子宽高比锁死等于图片宽高比：
+         图不会变形，而「数值相对图片的位置」是线性的，换任何屏幕比例都对得住。
+         （若改成 aspectFit，图会在盒子里居中留白，留白量随设备比例变化，数值就会飘。）
+
+         每个精灵自身就是热区——@tap 直接挂在 .spr 上，看到的就是点得到的，
+         不再需要另一套独立标定的透明热区跟着图走。 -->
     <view class="home-bg">
-      <image class="home-bg-slice" src="/static/ui/bg_home_1.jpg" mode="scaleToFill" />
-      <image class="home-bg-slice" src="/static/ui/bg_home_2.jpg" mode="scaleToFill" />
-      <image class="home-bg-slice" src="/static/ui/bg_home_3.jpg" mode="scaleToFill" />
-      <image class="home-bg-slice" src="/static/ui/bg_home_4.jpg" mode="scaleToFill" />
-      <image class="home-bg-slice" src="/static/ui/bg_home_5.jpg" mode="scaleToFill" />
+      <image class="home-bg-img" src="/static/ui/home/bg_home.webp" mode="scaleToFill" />
     </view>
 
-    <!-- 动态数据覆盖层 (仅在数值改变时无缝覆盖，pointer-events: none，0重影) -->
-    <!-- 1. 金币数值动态层 (仅在金币数发生变动大于0时覆盖) -->
-    <view class="dyn-overlay dyn-coins-val" v-if="gameState.coins > 0">
-      <text class="dyn-val-text">{{ displayCoins }}</text>
+    <!-- 顶栏左：设置 -->
+    <view class="spr spr-gear" @tap="openSettings">
+      <image class="spr-img" src="/static/ui/home/ui_gear.webp" mode="scaleToFill" />
     </view>
 
-    <!-- 2. 体力数值与倒计时动态层 (仅在体力不满5点时覆盖) -->
-    <view class="dyn-overlay dyn-stamina-val" v-if="gameState.stamina < 5">
-      <text class="dyn-val-text">{{ gameState.stamina }}</text>
-      <text class="dyn-stamina-sub">{{ displayStaminaTimer }}</text>
+    <!-- 顶栏：金币条 + 体力条是同一张图，所以拆两个子热区分别对准图上的两段 -->
+    <view class="spr spr-topbar">
+      <image class="spr-img" src="/static/ui/home/ui_topbar.webp" mode="scaleToFill" />
+      <view class="spr-tap tap-coins" @tap="openShopCoins"></view>
+      <view class="spr-tap tap-stamina" @tap="showStaminaTip"></view>
+      <view class="slot slot-topbar-coins">
+        <text class="slot-num">{{ displayCoins }}</text>
+      </view>
+      <view class="slot slot-topbar-stamina">
+        <text class="slot-num">{{ displayStamina }}</text>
+        <text class="slot-sub">{{ displayStaminaLabel }}</text>
+      </view>
     </view>
 
-    <!-- 3. 幸运礼包动态倒计时胶囊 (与原图底色底框100%贴合) -->
-    <view class="dyn-overlay dyn-lucky-timer" v-if="gameState.luckyBag.remainingSeconds > 0">
-      <text class="dyn-timer-text">{{ displayLuckyTimer }}</text>
+    <!-- 两个宝箱。进度条凹槽在母版上是空的，数字由这里补 -->
+    <view class="spr spr-chestLevel" @tap="openLevelChest">
+      <image class="spr-img" src="/static/ui/home/ui_chest_level.webp" mode="scaleToFill" />
+      <view class="slot slot-chestLevel-progress">
+        <text class="slot-num slot-num-sm">{{ displayLevelChest }}</text>
+      </view>
+    </view>
+    <view class="spr spr-chestStar" @tap="openStarChest">
+      <image class="spr-img" src="/static/ui/home/ui_chest_star.webp" mode="scaleToFill" />
+      <view class="slot slot-chestStar-progress">
+        <text class="slot-num slot-num-sm">{{ displayStarChest }}</text>
+      </view>
     </view>
 
-    <!-- 4. 关卡动态胶囊 (仅在关卡不是默认第2关时覆盖) -->
-    <view class="dyn-overlay dyn-level-pill" v-if="gameState.currentLevel !== 2">
-      <text class="dyn-level-text">关卡{{ displayLevel }}</text>
+    <!-- 冬日集卡活动横幅：牌堆进度 + 三档金币奖励门槛 -->
+    <view class="spr spr-banner" @tap="gotoCardsPage">
+      <image class="spr-img" src="/static/ui/home/ui_banner_cards.webp" mode="scaleToFill" />
+      <view class="slot slot-banner-cards"><text class="slot-tag">{{ displayCardsProgress }}</text></view>
+      <view class="slot slot-banner-coin1"><text class="slot-tag">200</text></view>
+      <view class="slot slot-banner-coin2"><text class="slot-tag">300</text></view>
+      <view class="slot slot-banner-coin3"><text class="slot-tag">500</text></view>
     </view>
 
-    <!-- ==================== 像素级精准透明热区按钮 ==================== -->
-    <!-- 顶栏 -->
-    <view class="hotspot hotspot-gear" @tap="openSettings"></view>
-    <view class="hotspot hotspot-coins" @tap="openShopCoins"></view>
-    <view class="hotspot hotspot-stamina" @tap="showStaminaTip"></view>
-
-    <!-- 宝箱 -->
-    <view class="hotspot hotspot-level-chest" @tap="openLevelChest"></view>
-    <view class="hotspot hotspot-star-chest" @tap="openStarChest"></view>
-
-    <!-- 冬日集卡活动 Banner -->
-    <view class="hotspot hotspot-winter-banner" @tap="gotoCardsPage"></view>
-
-    <!-- 左侧浮标 -->
-    <view class="hotspot hotspot-lucky-gift" @tap="openLuckyBag"></view>
-    <view class="hotspot hotspot-daily-task" @tap="openDailyTasks"></view>
-    <view class="hotspot hotspot-daily-chal" @tap="openDailyChallenge"></view>
+    <!-- 左侧浮标。
+         ⚠️ 幸运礼包这块图，母版上的文字标签误写成「每日任务」，和它下面那张
+         DAILY 日历撞名。这里不改图，而是让倒计时胶囊常驻（槽位正好框住那行字），
+         既还原了上一版「礼包 + 倒计时」的观感，也不会把错字露给玩家。
+         彻底修好需要美术重出一版标签正确的图块。 -->
+    <view class="spr spr-tileLucky" @tap="openLuckyBag">
+      <image class="spr-img" src="/static/ui/home/ui_tile_lucky.webp" mode="scaleToFill" />
+      <view class="slot slot-tileLucky-timer lucky-pill">
+        <text class="slot-timer">{{ displayLuckyTimer }}</text>
+      </view>
+    </view>
+    <view class="spr spr-tileTask" @tap="openDailyTasks">
+      <image class="spr-img" src="/static/ui/home/ui_tile_task.webp" mode="scaleToFill" />
+    </view>
+    <view class="spr spr-tileChallenge" @tap="openDailyChallenge">
+      <image class="spr-img" src="/static/ui/home/ui_tile_challenge.webp" mode="scaleToFill" />
+    </view>
 
     <!-- 右侧浮标 -->
-    <view class="hotspot hotspot-piggy-bank" @tap="openPiggyBank"></view>
-    <view class="hotspot hotspot-desktop" @tap="openAddToDesktop"></view>
+    <view class="spr spr-tilePiggy" @tap="openPiggyBank">
+      <image class="spr-img" src="/static/ui/home/ui_tile_piggy.webp" mode="scaleToFill" />
+    </view>
+    <view class="spr spr-tileDesktop" @tap="openAddToDesktop">
+      <image class="spr-img" src="/static/ui/home/ui_tile_desktop.webp" mode="scaleToFill" />
+    </view>
 
     <!-- 左下功能 -->
-    <view class="hotspot hotspot-theme" @tap="openThemeModal"></view>
-    <view class="hotspot hotspot-cards" @tap="gotoCardsPage"></view>
+    <view class="spr spr-tileTheme" @tap="openThemeModal">
+      <image class="spr-img" src="/static/ui/home/ui_tile_theme.webp" mode="scaleToFill" />
+    </view>
+    <view class="spr spr-tileCards" @tap="gotoCardsPage">
+      <image class="spr-img" src="/static/ui/home/ui_tile_cards.webp" mode="scaleToFill" />
+    </view>
+
+    <!-- 关卡胶囊。母版上「开始游戏」按钮背后压着一个写死「关卡」两字的深色胶囊，
+         那块没有抠进来——关卡号是动态的，用 CSS 画一个同色胶囊再写「关卡N」
+         既省一张图，也不会出现「图上写关卡、旁边再补个数字」的错位。 -->
+    <view class="level-pill">
+      <text class="level-pill-text">关卡{{ displayLevel }}</text>
+    </view>
 
     <!-- 底部中心与商店 -->
-    <view class="hotspot hotspot-start-game" @tap="handleStartGame"></view>
-    <view class="hotspot hotspot-shop" @tap="openShopAll"></view>
+    <view class="spr spr-btnStart" @tap="handleStartGame">
+      <image class="spr-img" src="/static/ui/home/ui_btn_start.webp" mode="scaleToFill" />
+    </view>
+    <view class="spr spr-tileShop" @tap="openShopAll">
+      <image class="spr-img" src="/static/ui/home/ui_tile_shop.webp" mode="scaleToFill" />
+    </view>
 
     <!-- ==================== 弹窗系统 ==================== -->
 
@@ -307,6 +371,27 @@
       </view>
     </view>
 
+    <!-- 8. 宝箱奖励弹窗。
+         这段模板此前一直缺失：openLevelChest / openStarChest 把 modals.chestReward
+         置了 true，但没有任何节点消费它，所以两个宝箱点下去只有金币静默入账、
+         屏幕上毫无反馈，表现就是“点了没反应”。样式（.reward-dialog 等）本来就在。 -->
+    <view class="modal-overlay" v-if="modals.chestReward" @tap.self="closeChestModal">
+      <view class="reward-dialog animate-pop" @tap.stop>
+        <view class="reward-header">{{ chestReward.title }}</view>
+        <view class="reward-grid">
+          <view class="reward-item">
+            <image class="reward-coin-lg" src="/static/ui/icon_crown_coin.png" mode="aspectFit" />
+            <text class="reward-name">金币 x{{ chestReward.coins }}</text>
+          </view>
+          <view class="reward-item" v-if="chestReward.toolCount > 0">
+            <image class="reward-coin-lg" :src="'/static/icons/' + chestReward.toolIcon" mode="aspectFit" />
+            <text class="reward-name">{{ chestReward.toolName }} x{{ chestReward.toolCount }}</text>
+          </view>
+        </view>
+        <button class="dialog-confirm-btn" @tap="closeChestModal">收下奖励</button>
+      </view>
+    </view>
+
     <!-- 模拟激励视频广告播放浮层 -->
     <view class="ad-overlay" v-if="adState.active">
       <view class="ad-box">
@@ -332,9 +417,11 @@ import {
   startGlobalTimers, 
   formatSeconds, 
   formatLongSeconds, 
-  addCoins, 
-  spendCoins, 
-  addTool 
+  addCoins,
+  spendCoins,
+  addTool,
+  consumeStamina,
+  refundStamina
 } from '../../game/state.js';
 
 // 计算属性，确保在模板中正确渲染字符串而不会触发编译器标识符混淆
@@ -343,6 +430,25 @@ const displayLevel = computed(() => String(gameState.currentLevel));
 const displayLuckyTimer = computed(() => formatLongSeconds(gameState.luckyBag.remainingSeconds));
 const displayStaminaTimer = computed(() => formatSeconds(gameState.staminaTimer));
 const piggyFillHeight = computed(() => Math.min(100, Math.floor(gameState.piggyBank.coins / 600 * 100)) + '%');
+
+/* 首页素材换成「无数字」版之后，顶栏、宝箱、集卡横幅上的数字不再烤在图里，
+ * 全部由下面这几个计算属性提供。图上那些凹槽本来就是空的，文字直接写进去即可，
+ * 不用像旧版那样再叠一层不透明色块去盖住烤死的旧数字。 */
+const displayStamina = computed(() => String(gameState.stamina));
+
+// 体力满了显示 "max"（和旧底图上烤的字一致），没满则显示下一点体力的恢复倒计时。
+const displayStaminaLabel = computed(() =>
+  gameState.stamina >= gameState.maxStamina ? 'max' : formatSeconds(gameState.staminaTimer)
+);
+
+const displayLevelChest = computed(() => gameState.levelChest.current + '/' + gameState.levelChest.target);
+const displayStarChest = computed(() => gameState.starChest.current + '/' + gameState.starChest.target);
+
+// 集卡进度按「已集到的卡种数 / 卡册总数」算，口径和集卡页一致。
+const displayCardsProgress = computed(() => {
+  const album = gameState.cardsAlbum || [];
+  return album.filter((c) => c.count > 0).length + '/' + album.length;
+});
 
 // 弹窗状态管理
 const modals = reactive({
@@ -359,7 +465,8 @@ const activeTaskTab = ref('daily');
 function setDailyTab() { activeTaskTab.value = 'daily'; }
 function setLongTab() { activeTaskTab.value = 'long'; }
 
-const lastReward = reactive({ coins: 0, tools: 0 });
+// 宝箱弹窗展示的奖励内容
+const chestReward = reactive({ title: '', coins: 0, toolName: '', toolIcon: 'shop_tool_clear.jpg', toolCount: 0 });
 
 const currentTaskList = computed(() => {
   return activeTaskTab.value === 'daily' ? gameState.dailyTasks : gameState.longTasks;
@@ -433,7 +540,7 @@ function handleAddToDesktop() {
 }
 
 function showStaminaTip() {
-  if (gameState.stamina >= 5) {
+  if (gameState.stamina >= gameState.maxStamina) {
     uni.showToast({
       title: '您的体力已满',
       icon: 'none'
@@ -442,13 +549,14 @@ function showStaminaTip() {
   }
   uni.showModal({
     title: '体力说明',
-    content: '当前体力: ' + gameState.stamina + '/5\n每15分钟自动恢复1点体力。是否看广告补满体力？',
+    content: '当前体力: ' + gameState.stamina + '/' + gameState.maxStamina
+      + '\n每15分钟自动恢复1点体力。是否看广告补满体力？',
     confirmText: '看广告补满',
     cancelText: '取消',
     success: (res) => {
       if (res.confirm) {
         triggerAd(() => {
-          gameState.stamina = 5;
+          refundStamina(gameState.maxStamina);
           uni.showToast({ title: '体力已补满！', icon: 'success' });
         });
       }
@@ -468,7 +576,7 @@ function openDailyChallenge() {
     cancelText: '稍后再来',
     success: (res) => {
       if (res.confirm) {
-        uni.navigateTo({ url: '/pkg-game/pages/game/game?level=' + gameState.currentLevel + '&mode=challenge' });
+        navigateOrWarn('/pkg-game/pages/game/game?level=' + gameState.currentLevel + '&mode=challenge');
       }
     }
   });
@@ -479,24 +587,48 @@ function openThemeModal() {
 }
 
 function gotoCardsPage() {
-  uni.navigateTo({ url: '/pkg-cards/pages/cards/cards' });
+  navigateOrWarn('/pkg-cards/pages/cards/cards');
+}
+
+/* 领取宝箱。
+ *
+ * state.js 现在把宝箱进度封顶在 target 等待领取（不再通关一次就清零），所以这里
+ * 必须真的把进度清掉，否则宝箱会永远停在满格。同时补上“未满不发奖”的判断——
+ * 旧实现每点一次就白送一次金币，等于无限刷。gmMode 下放行，方便自测。 */
+function claimChest(chest, reward) {
+  if (!chest) return;
+  if (chest.current < chest.target && !gameState.settings.gmMode) {
+    uni.showToast({
+      title: '还差 ' + (chest.target - chest.current) + ' 点即可开启，继续闯关吧！',
+      icon: 'none'
+    });
+    return;
+  }
+  chest.current = 0;
+  addCoins(reward.coins);
+  if (reward.toolCount > 0) addTool(reward.tool, reward.toolCount);
+  chestReward.title = reward.title;
+  chestReward.coins = reward.coins;
+  chestReward.toolName = reward.toolName;
+  chestReward.toolIcon = reward.toolIcon;
+  chestReward.toolCount = reward.toolCount;
+  modals.chestReward = true;
 }
 
 function openLevelChest() {
-  lastReward.coins = 50;
-  lastReward.tools = 1;
-  addCoins(50);
-  addTool('clear', 1);
-  modals.chestReward = true;
+  claimChest(gameState.levelChest, {
+    title: '关卡宝箱已开启！',
+    coins: 50,
+    tool: 'clear', toolName: '消除', toolIcon: 'shop_tool_clear.jpg', toolCount: 1
+  });
 }
 
 function openStarChest() {
-  lastReward.coins = 150;
-  lastReward.tools = 2;
-  addCoins(150);
-  addTool('shuffle', 1);
-  addTool('undo', 1);
-  modals.chestReward = true;
+  claimChest(gameState.starChest, {
+    title: '星星宝箱已开启！',
+    coins: 150,
+    tool: 'shuffle', toolName: '洗牌', toolIcon: 'shop_tool_shuffle.jpg', toolCount: 2
+  });
 }
 
 function unlockLuckyBag() {
@@ -564,17 +696,47 @@ function toggleSetting(key) {
   gameState.settings[key] = !gameState.settings[key];
 }
 
+/* 跳转失败必须让玩家看见。
+ *
+ * 分包改造后对局页搬到了 /pkg-game，首页却还按老路径跳，navigateTo 直接 fail；
+ * uni 默认只在控制台打一行错，界面上什么都不发生——这正是“点开始游戏没反应”的
+ * 由来。这里统一补上失败兜底：提示 + 把已经扣掉的体力退回去。 */
+/* 跳转前后套一层加载提示。
+ *
+ * 对局页和集卡页都在分包里，首次进入要先把分包下下来，慢的时候 3~8 秒。这期间
+ * navigateTo 还没回调，屏幕上一点动静都没有，玩家的体感就是「点了没反应」，
+ * 于是反复戳按钮。pages.json 里已经配了 preloadRule 让两个分包在首页就开始预下载，
+ * 但预下载不保证跑在玩家点击之前（弱网、冷启动），提示仍然要给。
+ *
+ * 关闭走 success / fail 两条腿而不是 complete：navigateTo 必定只命中其中一个，
+ * 覆盖是完整的；而 complete 排在 fail 之后，会把 fail 里刚弹出来的 toast 一起
+ * 关掉——微信的 loading 和 toast 共用同一个通道，hideLoading 会顺手掐掉 toast。 */
+function navigateOrWarn(url, onFail) {
+  uni.showLoading({ title: '加载中', mask: true });
+  uni.navigateTo({
+    url,
+    success: () => {
+      uni.hideLoading();
+    },
+    fail: () => {
+      uni.hideLoading();
+      if (onFail) onFail();
+      uni.showToast({ title: '页面打开失败，请重启小程序后重试', icon: 'none' });
+    }
+  });
+}
+
 function handleStartGame() {
-  if (gameState.stamina <= 0 && !gameState.settings.gmMode) {
+  // 体力口径统一走 state.js：内部处理 gmMode，并在扣除瞬间就起满 15 分钟恢复计时
+  if (!consumeStamina(1)) {
     showStaminaTip();
     return;
   }
-  if (!gameState.settings.gmMode) {
-    gameState.stamina--;
-  }
-  uni.navigateTo({
-    url: '/pkg-game/pages/game/game?level=' + gameState.currentLevel
-  });
+  navigateOrWarn(
+    '/pkg-game/pages/game/game?level=' + gameState.currentLevel,
+    // gmMode 下 consumeStamina 本就没扣，不能反手多送一点
+    () => { if (!gameState.settings.gmMode) refundStamina(1); }
+  );
 }
 
 onMounted(() => {
@@ -588,6 +750,8 @@ onMounted(() => {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  /* 背景是 WebP。微信 <image> 支持 WebP（iOS 需基础库 2.9.0+），
+     万一某台设备解不出来，这个兜底色是底图主色，至少不会白屏。 */
   background-color: #55a297;
 }
 
@@ -598,230 +762,161 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   z-index: 1;
-  display: flex;
-  flex-direction: column;
 }
 
-/* flex: 1 让 5 条精确均分容器高度，不用百分比，避免取整产生缝隙 */
-.home-bg-slice {
-  flex: 1;
+/* 背景铺满容器。源图 941x1672 不预缩放——页面上反正要 scaleToFill 拉到屏幕比例，
+   预先缩放到 1260x2800 只会让文件变大，屏幕上的观感一模一样。 */
+.home-bg-img {
   width: 100%;
+  height: 100%;
   display: block;
 }
 
-/* ================== 动态数据覆盖层 (仅用于动态变化覆盖) ================== */
-.dyn-overlay {
+/* ================== UI 精灵层 ==================
+   每个精灵是一个绝对定位的盒子，里面一张铺满的图，外加若干数值槽位。
+   盒子本身就是热区：@tap 挂在 .spr 上，所见即所点。 */
+.spr {
   position: absolute;
   z-index: 10;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.spr-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.spr:active {
+  transform: scale(0.96);
+  transition: transform 0.08s ease;
+}
+
+/* 同一张图里划分出来的子热区（目前只有顶栏的金币段 / 体力段）。 */
+.spr-tap {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  z-index: 3;
+}
+
+/* 顶栏图上，爱心的左边缘落在 44.25% 处，从那里把金币段和体力段切开。 */
+.tap-coins { left: 0; width: 44.25%; }
+.tap-stamina { left: 44.25%; right: 0; width: 55.75%; }
+
+/* ================== 数值文字层 ==================
+   槽位对准的是母版图上那些故意留空的凹槽，所以不需要任何底色去盖——
+   这正是换用「无数字」素材最大的好处。 */
+.slot {
+  position: absolute;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   pointer-events: none;
 }
 
-/* 金币数值 */
-.dyn-coins-val {
-  left: 21.43%;
-  top: 5.2%;
-  width: 10.32%;
-  height: 2.8%;
-  background: #436273;
-  border-radius: 10rpx;
-}
-
-.dyn-val-text {
+/* 30rpx 是按最长的一串定的：金币凹槽换算下来约 85rpx 宽，五位数金币
+   （10000 以上）在这个字号下刚好放得进去，再大一号就会被 overflow 切掉。 */
+.slot-num {
   color: #ffffff;
   font-size: 30rpx;
   font-weight: 900;
-  text-shadow: 0 2rpx 4rpx rgba(0,0,0,0.5);
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
 }
 
-/* 体力数值与倒计时 */
-.dyn-stamina-val {
-  left: 46%;
-  top: 5.2%;
-  width: 12%;
-  height: 2.8%;
-  background: #436273;
-  border-radius: 10rpx;
-  gap: 6rpx;
+/* 宝箱进度槽比顶栏的窄，"3/500" 这种四五个字符要小一号才不顶边。 */
+.slot-num-sm {
+  font-size: 30rpx;
 }
 
-.dyn-stamina-sub {
+.slot-sub {
   color: #fef08a;
   font-size: 20rpx;
   font-weight: 800;
+  margin-left: 8rpx;
+  white-space: nowrap;
 }
 
-/* 幸运礼包倒计时 */
-.dyn-lucky-timer {
-  left: 4.2%;
-  top: 24.3%;
-  width: 14.8%;
-  height: 2.1%;
+/* 横幅上的小标签：集卡进度与三档金币门槛。描边让它在雪景和深蓝条上都读得清。 */
+.slot-tag {
+  color: #ffffff;
+  font-size: 24rpx;
+  font-weight: 900;
+  text-shadow: 0 0 6rpx rgba(0, 0, 0, 0.9), 0 2rpx 3rpx rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+}
+
+/* 幸运礼包倒计时。常驻显示，顺带盖住母版图上那行写错的「每日任务」标签。 */
+.lucky-pill {
   background: #002d24;
-  border-radius: 14rpx;
   border: 3rpx solid #30966a;
+  border-radius: 999rpx;
 }
 
-.dyn-timer-text {
+.slot-timer {
   color: #fef08a;
-  font-size: 18rpx;
+  font-size: 22rpx;
   font-weight: 900;
   white-space: nowrap;
 }
 
-/* 关卡动态胶囊 */
-.dyn-level-pill {
+/* ================== 关卡胶囊（纯 CSS，无图） ================== */
+.level-pill {
+  position: absolute;
   left: 33.7%;
   top: 69.8%;
   width: 32.6%;
   height: 4.1%;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: #2b5952;
   border-radius: 30rpx;
-  box-shadow: inset 0 2rpx 4rpx rgba(255,255,255,0.2);
+  box-shadow: inset 0 2rpx 4rpx rgba(255, 255, 255, 0.2);
+  pointer-events: none;
 }
 
-.dyn-level-text {
+.level-pill-text {
   color: #ffffff;
   font-size: 32rpx;
   font-weight: 900;
   letter-spacing: 2rpx;
 }
 
-/* ================== 透明精准热区按钮 ================== */
-.hotspot {
-  position: absolute;
-  z-index: 20;
-  -webkit-tap-highlight-color: transparent;
-}
+/* AUTOGEN:HOME-LAYERS:BEGIN —— 由 mp-tools/build-home-layers.cjs 生成，不要手改 */
 
-.hotspot:active {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 20rpx;
-  transform: scale(0.96);
-  transition: transform 0.08s ease;
-}
+/* 每个 UI 精灵在屏幕上的盒子。宽高比 === 图片宽高比，配合 scaleToFill 不会变形。 */
+.spr-gear { left: 2.5%; top: 4.385%; width: 10%; height: 4.43%; }
+.spr-topbar { left: 13.5%; top: 4.656%; width: 52.5%; height: 3.889%; }
+.spr-chestLevel { left: 3.5%; top: 10.614%; width: 45%; height: 7.072%; }
+.spr-chestStar { left: 53.5%; top: 10.71%; width: 44%; height: 6.88%; }
+.spr-banner { left: 21%; top: 18.309%; width: 58%; height: 11.782%; }
+.spr-tileLucky { left: 3%; top: 19.073%; width: 18%; height: 7.555%; }
+.spr-tilePiggy { left: 79.5%; top: 19.287%; width: 18.5%; height: 7.426%; }
+.spr-tileDesktop { left: 79.5%; top: 27.071%; width: 18.5%; height: 7.858%; }
+.spr-tileTask { left: 3%; top: 28.079%; width: 18%; height: 6.842%; }
+.spr-tileChallenge { left: 3%; top: 36.4%; width: 18%; height: 6.999%; }
+.spr-tileTheme { left: 2.5%; top: 75.392%; width: 18.5%; height: 5.415%; }
+.spr-tileCards { left: 2.5%; top: 83.49%; width: 18.5%; height: 5.219%; }
+.spr-btnStart { left: 21%; top: 73.681%; width: 58%; height: 9.238%; }
+.spr-tileShop { left: 28%; top: 87.337%; width: 16%; height: 6.525%; }
 
-.hotspot-gear {
-  left: 2.5%;
-  top: 4.2%;
-  width: 10%;
-  height: 4.8%;
-  border-radius: 50%;
-}
+/* 数值槽位：百分比相对所属精灵盒子，对准母版图上那些留空的凹槽。 */
+.slot-topbar-coins { left: 12.888%; top: 18.868%; width: 24.068%; height: 70.755%; }
+.slot-topbar-stamina { left: 62.888%; top: 18.868%; width: 23.913%; height: 70.755%; }
+.slot-chestLevel-progress { left: 33.56%; top: 47.805%; width: 60.477%; height: 37.561%; }
+.slot-chestStar-progress { left: 5.763%; top: 47.805%; width: 60.339%; height: 37.561%; }
+.slot-banner-cards { left: 7.324%; top: 68.212%; width: 12.855%; height: 11.921%; }
+.slot-banner-coin1 { left: 34.081%; top: 76.49%; width: 12.855%; height: 11.258%; }
+.slot-banner-coin2 { left: 57.399%; top: 76.49%; width: 12.855%; height: 11.258%; }
+.slot-banner-coin3 { left: 81.016%; top: 76.49%; width: 12.855%; height: 11.258%; }
+.slot-tileLucky-timer { left: 0.962%; top: 68.041%; width: 98.077%; height: 30.928%; }
 
-.hotspot-coins {
-  left: 13.5%;
-  top: 4.4%;
-  width: 25.5%;
-  height: 4.4%;
-  border-radius: 30rpx;
-}
-
-.hotspot-stamina {
-  left: 39.5%;
-  top: 4.4%;
-  width: 26.5%;
-  height: 4.4%;
-  border-radius: 30rpx;
-}
-
-.hotspot-level-chest {
-  left: 3.5%;
-  top: 10.4%;
-  width: 45%;
-  height: 7.5%;
-  border-radius: 24rpx;
-}
-
-.hotspot-star-chest {
-  left: 53.5%;
-  top: 10.4%;
-  width: 44%;
-  height: 7.5%;
-  border-radius: 24rpx;
-}
-
-.hotspot-winter-banner {
-  left: 21%;
-  top: 18.2%;
-  width: 58%;
-  height: 12%;
-  border-radius: 24rpx;
-}
-
-.hotspot-lucky-gift {
-  left: 3%;
-  top: 18.6%;
-  width: 18%;
-  height: 8.5%;
-  border-radius: 24rpx;
-}
-
-.hotspot-daily-task {
-  left: 3%;
-  top: 27.4%;
-  width: 18%;
-  height: 8.2%;
-  border-radius: 24rpx;
-}
-
-.hotspot-daily-chal {
-  left: 3%;
-  top: 35.8%;
-  width: 18%;
-  height: 8.2%;
-  border-radius: 24rpx;
-}
-
-.hotspot-piggy-bank {
-  left: 79.5%;
-  top: 19%;
-  width: 18.5%;
-  height: 8%;
-  border-radius: 24rpx;
-}
-
-.hotspot-desktop {
-  left: 79.5%;
-  top: 27%;
-  width: 18.5%;
-  height: 8%;
-  border-radius: 24rpx;
-}
-
-.hotspot-theme {
-  left: 2.5%;
-  top: 74.2%;
-  width: 18.5%;
-  height: 7.8%;
-  border-radius: 24rpx;
-}
-
-.hotspot-cards {
-  left: 2.5%;
-  top: 82.2%;
-  width: 18.5%;
-  height: 7.8%;
-  border-radius: 24rpx;
-}
-
-.hotspot-start-game {
-  left: 21%;
-  top: 73.6%;
-  width: 58%;
-  height: 9.4%;
-  border-radius: 40rpx;
-}
-
-.hotspot-shop {
-  left: 28%;
-  top: 87.5%;
-  width: 16%;
-  height: 6.2%;
-  border-radius: 24rpx;
-}
+/* AUTOGEN:HOME-LAYERS:END */
 
 /* ================== 弹窗系统通用样式 ================== */
 .modal-overlay {
@@ -1632,6 +1727,7 @@ onMounted(() => {
 }
 
 .reward-icon-lg { font-size: 64rpx; }
+.reward-coin-lg { width: 96rpx; height: 96rpx; }
 .reward-name { font-size: 26rpx; font-weight: 800; color: #1e293b; }
 
 /* 广告模拟播放层 */

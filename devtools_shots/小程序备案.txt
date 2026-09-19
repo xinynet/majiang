@@ -12,29 +12,4 @@ S文件
 已通过
 不建议引用过大插件(大小超过200K) 查看 已通过 图片不清晰  小程序备案所提供的图片质量差，无法辨识图内文本内容，请全面自查及更新后重新提交。
 
-适龄提示图片：
-https://kkimgs.yisou.com/ims?at=ori&kt=url&key=aHR0cHM6Ly9zd2l0Y2gtY24uZ3RncmVzLmNvbS9nbG9iYWwtaW1hZ2UvMmU1MTY3MDAtNWRhMC0xMWVjLWFiYmQtZTFhZWFiODVmOTc1LnBuZw==&sign=yx:LO5BoL45uBkC5uFCW13bdeJ_bgE=&tv=0_0&p=
-健康游戏忠告
-抵制不良游戏，拒绝盗版游戏。注意自我保护，谨防受骗上当。
-适度游戏益脑，沉迷游戏伤身。合理安排时间，享受健康生活
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+无按钮首页.png无数字透明按钮.png 利用这两个来压缩让小程序合规   最终需要微信开发者工具里的代码质量检测全部通过

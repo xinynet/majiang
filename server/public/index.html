@@ -125,6 +125,64 @@
       </div>
     </div>
     <div class="card">
+      <div class="card-title">
+        <span><i class="fa-solid fa-tv"></i> 广告投放</span>
+        <span style="font-size: 12px; font-weight: 400; color: var(--muted);">改完保存即生效，客户端下次启动拉取</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>广告总开关</label>
+          <select id="ads-enabled">
+            <option value="true">开启</option>
+            <option value="false">关闭 (所有看广告入口直接发放奖励)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>广告来源</label>
+          <select id="ads-provider">
+            <option value="mock">本地模拟 (开发/过审前，不请求真实广告)</option>
+            <option value="wechat">微信激励视频 (正式投放)</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label>激励视频广告位 ID <span style="color: var(--muted); font-weight: 400;">（小游戏后台「流量主 - 广告位管理」里创建，形如 adunit-xxxxxxxxxxxx）</span></label>
+          <input type="text" id="ads-rewardedVideoUnitId" placeholder="adunit-">
+        </div>
+        <div class="form-group">
+          <label>Banner 广告位 ID (选填)</label>
+          <input type="text" id="ads-bannerUnitId" placeholder="adunit-">
+        </div>
+        <div class="form-group">
+          <label>两次激励视频最小间隔 (秒)</label>
+          <input type="number" id="ads-minIntervalSeconds" min="0">
+        </div>
+        <div class="form-group">
+          <label>拉不到广告时</label>
+          <select id="ads-fallbackToMock">
+            <option value="true">退回本地模拟并照常发奖 (开发期)</option>
+            <option value="false">提示用户稍后再试，不发奖 (正式运营)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top: 22px;">
+        <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 10px;">
+          投放位开关（关掉某一个，该入口就直接发奖不再弹广告；出问题时不用整个停掉）
+        </label>
+        <div id="ads-placements" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px;"></div>
+      </div>
+
+      <div style="margin-top: 22px;">
+        <label style="display: block; font-size: 13px; color: var(--muted); margin-bottom: 10px;">分投放位数据（曝光 / 看完 / 失败）</label>
+        <table>
+          <thead>
+            <tr><th>投放位</th><th>曝光</th><th>看完</th><th>失败</th><th>完成率</th></tr>
+          </thead>
+          <tbody id="ads-stats-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-title"><span><i class="fa-solid fa-layer-group"></i> 关卡难度梯度配置</span></div>
       <table>
         <thead>
@@ -164,6 +222,19 @@
   <div id="toast"><i class="fa-solid fa-circle-check" style="color: #34d399;"></i> <span id="toast-msg">配置已更新</span></div>
   <script>
     let currentConfig = null;
+
+    /* 投放位：key 要和客户端 majiang-game/src/ads.js 里的 PLACEMENTS 一一对应，
+       改名字要两边一起改，否则后台关了开关客户端根本不认。 */
+    const PLACEMENTS = [
+      ["luckyBag", "首页 · 幸运礼包解锁"],
+      ["piggy", "首页 · 存钱罐领取"],
+      ["stamina", "首页 · 看广告补满体力"],
+      ["shopCoins", "商城 · 免费领金币"],
+      ["shopTool", "商城 · 免费领道具"],
+      ["refill", "牌桌 · 道具补给免费拿"],
+      ["cardsChest", "集卡 · 视频宝箱"],
+      ["cardsDetail", "集卡 · 卡片详情补碎片"]
+    ];
     function showToast(msg) {
       const toast = document.getElementById("toast");
       document.getElementById("toast-msg").innerText = msg;
@@ -182,9 +253,66 @@
           const tu = d.toolUsage || {};
           const sumTools = (tu.clear || 0) + (tu.shuffle || 0) + (tu.undo || 0) + (tu.magnet || 0);
           document.getElementById("st-tools").innerText = sumTools;
+          renderAdStats(d.ads || {});
         }
       } catch (e) {}
     }
+    function renderAdStats(ads) {
+      const by = ads.byPlacement || {};
+      const tbody = document.getElementById("ads-stats-tbody");
+      tbody.innerHTML = "";
+      PLACEMENTS.forEach(([key, label]) => {
+        const row = by[key] || { impressions: 0, completions: 0, errors: 0 };
+        const rate = row.impressions ? Math.round(row.completions / row.impressions * 100) + "%" : "-";
+        const tr = document.createElement("tr");
+        tr.innerHTML = "<td>" + label + "</td><td>" + (row.impressions || 0) + "</td><td>" +
+          (row.completions || 0) + "</td><td>" + (row.errors || 0) + "</td><td>" + rate + "</td>";
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderAds(ads) {
+      ads = ads || {};
+      document.getElementById("ads-enabled").value = String(ads.enabled !== false);
+      document.getElementById("ads-provider").value = ads.provider || "mock";
+      document.getElementById("ads-rewardedVideoUnitId").value = ads.rewardedVideoUnitId || "";
+      document.getElementById("ads-bannerUnitId").value = ads.bannerUnitId || "";
+      document.getElementById("ads-minIntervalSeconds").value = ads.minIntervalSeconds || 0;
+      document.getElementById("ads-fallbackToMock").value = String(ads.fallbackToMock !== false);
+
+      const box = document.getElementById("ads-placements");
+      const on = ads.placements || {};
+      box.innerHTML = "";
+      PLACEMENTS.forEach(([key, label]) => {
+        const wrap = document.createElement("label");
+        wrap.style.cssText = "display:flex;align-items:center;gap:8px;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer;";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.className = "ads-placement";
+        cb.dataset.key = key;
+        cb.checked = on[key] !== false;
+        wrap.appendChild(cb);
+        wrap.appendChild(document.createTextNode(label));
+        box.appendChild(wrap);
+      });
+    }
+
+    function collectAds() {
+      const placements = {};
+      document.querySelectorAll(".ads-placement").forEach((cb) => {
+        placements[cb.dataset.key] = cb.checked;
+      });
+      return {
+        enabled: document.getElementById("ads-enabled").value === "true",
+        provider: document.getElementById("ads-provider").value,
+        rewardedVideoUnitId: document.getElementById("ads-rewardedVideoUnitId").value.trim(),
+        bannerUnitId: document.getElementById("ads-bannerUnitId").value.trim(),
+        minIntervalSeconds: Number(document.getElementById("ads-minIntervalSeconds").value) || 0,
+        fallbackToMock: document.getElementById("ads-fallbackToMock").value === "true",
+        placements: placements
+      };
+    }
+
     async function loadConfig() {
       try {
         const res = await fetch("/api/config");
@@ -203,6 +331,7 @@
       document.getElementById("cfg-adRewardCount").value = cfg.adRewardCount || 1;
       document.getElementById("cfg-gmMode").value = String(!!cfg.gmMode);
       document.getElementById("cfg-announcement").value = cfg.announcement || "";
+      renderAds(cfg.ads);
       const it = cfg.initialTools || {};
       document.getElementById("cfg-tool-clear").value = it.clear || 1;
       document.getElementById("cfg-tool-shuffle").value = it.shuffle || 1;
@@ -212,11 +341,16 @@
       tbody.innerHTML = "";
       (cfg.levels || []).forEach((lvl, idx) => {
         const tr = document.createElement("tr");
+        /* 这段以前写成 "<input type="number" ...>"，双引号没转义，整个 <script> 块直接
+           语法错误——页面上的统计、读配置、保存全都不执行。改用单引号写 HTML 属性。 */
+        const cell = (cls, type, val, width, unit) =>
+          "<td><input type='" + type + "' class='" + cls + "' value='" + val +
+          "' style='width: " + width + "px; padding: 6px;'>" + (unit ? " " + unit : "") + "</td>";
         tr.innerHTML = "<td><strong>第 " + lvl.level + " 关</strong></td>" +
-          "<td><input type="number" class="lvl-tiles" value="" + lvl.tiles + "" style="width: 110px; padding: 6px;"> 张</td>" +
-          "<td><input type="number" class="lvl-types" value="" + lvl.types + "" style="width: 90px; padding: 6px;"> 种</td>" +
-          "<td><input type="number" class="lvl-time" value="" + lvl.time + "" style="width: 100px; padding: 6px;"> 秒</td>" +
-          "<td><input type="text" class="lvl-desc" value="" + (lvl.desc || "") + "" style="width: 160px; padding: 6px;"></td>";
+          cell("lvl-tiles", "number", lvl.tiles, 110, "张") +
+          cell("lvl-types", "number", lvl.types, 90, "种") +
+          cell("lvl-time", "number", lvl.time, 100, "秒") +
+          cell("lvl-desc", "text", String(lvl.desc || "").replace(/'/g, "&#39;"), 160, "");
         tbody.appendChild(tr);
       });
     }
@@ -227,6 +361,13 @@
       currentConfig.adRewardCount = Number(document.getElementById("cfg-adRewardCount").value);
       currentConfig.gmMode = document.getElementById("cfg-gmMode").value === "true";
       currentConfig.announcement = document.getElementById("cfg-announcement").value;
+      currentConfig.ads = collectAds();
+      /* 选了正式投放却没填广告位 ID，客户端只能退回模拟——与其上线才发现，不如这里拦住。 */
+      if (currentConfig.ads.enabled && currentConfig.ads.provider === "wechat"
+          && !/^adunit-/.test(currentConfig.ads.rewardedVideoUnitId)) {
+        showToast("广告来源选了「微信激励视频」，请先填写以 adunit- 开头的广告位 ID");
+        return;
+      }
       currentConfig.initialTools = {
         clear: Number(document.getElementById("cfg-tool-clear").value),
         shuffle: Number(document.getElementById("cfg-tool-shuffle").value),

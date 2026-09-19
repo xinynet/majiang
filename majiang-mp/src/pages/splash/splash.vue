@@ -30,12 +30,25 @@ const progress = ref(6);
 // Long enough for the bar to read as a real load rather than a flicker.
 const MIN_SHOW_MS = 1800;
 
+/* 首页现在是「背景 + 逐元素透明精灵」分层渲染，这里把首屏会用到的图都预热一遍，
+ * 免得进首页时按钮一个个蹦出来。清单跟 mp-tools/home-layout.cjs 的产物一一对应，
+ * 换素材时两边要一起改（home-regression.cjs 会校验这一点）。 */
 const PRELOAD = [
-  '/static/ui/bg_home_1.jpg',
-  '/static/ui/bg_home_2.jpg',
-  '/static/ui/bg_home_3.jpg',
-  '/static/ui/bg_home_4.jpg',
-  '/static/ui/bg_home_5.jpg',
+  '/static/ui/home/bg_home.webp',
+  '/static/ui/home/ui_gear.webp',
+  '/static/ui/home/ui_topbar.webp',
+  '/static/ui/home/ui_chest_level.webp',
+  '/static/ui/home/ui_chest_star.webp',
+  '/static/ui/home/ui_banner_cards.webp',
+  '/static/ui/home/ui_tile_lucky.webp',
+  '/static/ui/home/ui_tile_piggy.webp',
+  '/static/ui/home/ui_tile_desktop.webp',
+  '/static/ui/home/ui_tile_task.webp',
+  '/static/ui/home/ui_tile_challenge.webp',
+  '/static/ui/home/ui_tile_theme.webp',
+  '/static/ui/home/ui_tile_cards.webp',
+  '/static/ui/home/ui_btn_start.webp',
+  '/static/ui/home/ui_tile_shop.webp',
 ];
 
 function loadOne(src) {

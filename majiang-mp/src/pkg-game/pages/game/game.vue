@@ -30,6 +30,7 @@
     <view class="g-status-custom">
       <view class="status-left">
         <text class="stat-bold">关卡{{ view.level }}</text>
+        <text class="stat-dim" v-if="isChallenge">每日挑战</text>
         <text class="stat-dim">种类{{ view.types }}</text>
         <text class="stat-dim">总数{{ view.initial }}</text>
       </view>
@@ -155,14 +156,15 @@
     <view class="modal-overlay" v-if="isWon">
       <view class="settle-dialog animate-pop">
         <view class="settle-header-win">🎉 恭喜通关！</view>
+        <view class="settle-sub-desc" v-if="isChallenge">每日挑战 · 双倍奖励</view>
         <view class="settle-rewards-box">
           <view class="settle-item">
             <text class="settle-icon">🪙</text>
-            <text class="settle-lbl">金币 +20</text>
+            <text class="settle-lbl">金币 +{{ rewardCoins }}</text>
           </view>
           <view class="settle-item">
             <text class="settle-icon">🐷</text>
-            <text class="settle-lbl">存钱罐 +25</text>
+            <text class="settle-lbl">存钱罐 +{{ rewardPiggy }}</text>
           </view>
           <view class="settle-item">
             <text class="settle-icon">⭐</text>
@@ -192,6 +194,18 @@
       </view>
     </view>
 
+    <!-- 5. 初始化失败提示 (画布/牌面资源加载失败时不再静默卡死) -->
+    <view class="modal-overlay" v-if="initError">
+      <view class="settle-dialog animate-pop">
+        <view class="settle-header-lose">牌桌加载失败</view>
+        <view class="settle-sub-desc">{{ initError }}</view>
+        <view class="settle-action-row">
+          <button class="settle-btn-main" @tap="retryInit">重试</button>
+          <button class="settle-btn-sub" @tap="exitToHome">返回</button>
+        </view>
+      </view>
+    </view>
+
     <!-- 模拟广告播放浮层 -->
     <view class="ad-overlay" v-if="adActive">
       <view class="ad-box">
@@ -209,12 +223,16 @@
 
 <script setup>
 import { reactive, ref, computed, watch, nextTick, onMounted, onUnmounted, getCurrentInstance } from 'vue';
+import { onHide, onShow } from '@dcloudio/uni-app';
 import { TileMotion } from '../../../game/tile-motion.js';
 import { createGame, boardMetrics, faceKey } from '../../../game/game-core.js';
 import { createBoardRenderer } from '../../../game/canvas-board.js';
 import { createEmitter, canvasHost, resolveCanvas } from '../../../game/platform.js';
 import { drawShuffleHands } from '../../../game/shuffle-hands.js';
-import { gameState, spendCoins, addCoins, winLevelAction } from '../../../game/state.js';
+import {
+  gameState, spendCoins, addTool, winLevelAction,
+  consumeStamina, refundStamina
+} from '../../../game/state.js';
 
 const instance = getCurrentInstance();
 
@@ -235,11 +253,24 @@ let game = null, renderer = null, host = null, metrics = null;
 let boardSize = { width: 0, height: 0 };
 // Where the board sits on screen, for turning a touch into a board coordinate.
 let boardRect = { left: 0, top: 0 };
-let running = false, clockTimer = null, lastFrame = 0;
+let running = false, clockTimer = null, startClockTimer = null, lastFrame = 0;
 let handImage = null, dealStart = 0, dealLength = 1;
 const paused = ref(false);
 const isWon = ref(false);
 const isLost = ref(false);
+// 每日挑战（首页 mode=challenge 进入）：更短时限、更多花色，结算双倍
+const isChallenge = ref(false);
+// 初始化失败提示，非空即显示重试弹窗并禁用牌桌交互
+const initError = ref('');
+
+// 结算弹窗里的奖励文案必须和 winLevelAction 实际发放的一致
+const rewardCoins = computed(() => (isChallenge.value ? 40 : 20));
+const rewardPiggy = computed(() => (isChallenge.value ? 50 : 25));
+
+const CHALLENGE = {
+  roundSeconds: 480,   // 普通 600 秒
+  types: 12,           // 普通按牌数自动取，挑战固定放宽到 12 种
+};
 
 // 道具补给弹窗
 const refillModal = reactive({
@@ -255,6 +286,7 @@ const refillModal = reactive({
 const adActive = ref(false);
 const adCountdown = ref(3);
 let adCallback = null;
+let adTimer = null;
 
 /* WeChat's own capsule menu owns the top-right corner on every device, so the
  * clock is dropped below it rather than sitting underneath it. */
@@ -262,7 +294,11 @@ const topInset = ref(0);
 const timerDrop = ref(0);
 
 function layoutTopBar() {
-  const info = uni.getWindowInfo ? uni.getWindowInfo() : uni.getSystemInfoSync();
+  /* 只用 uni.getWindowInfo，不再回退 wx.getSystemInfoSync：后者自基础库 2.20.1 起
+     已停止维护，开发者工具的「代码质量检测」会把它当废弃接口扣分。2.20.1 是 2021 年的
+     基础库，现网覆盖率已接近满额，而本项目的首页底图本来就要求 2.9.0+ 才能解 WebP，
+     门槛并没有因此抬高。 */
+  const info = uni.getWindowInfo();
   const status = info.statusBarHeight || 20;
   topInset.value = status;
   try {
@@ -277,10 +313,12 @@ function layoutTopBar() {
  * <view> whatever the z-index says, so a dialog opened over the board ends up
  * buried under the tiles. Hiding the canvas while a dialog is up is what keeps
  * those buttons visible and tappable. */
-const modalOpen = computed(() => paused.value || isWon.value || isLost.value || refillModal.visible || adActive.value);
+const modalOpen = computed(() => paused.value || isWon.value || isLost.value
+  || refillModal.visible || adActive.value || !!initError.value);
 
 // Coming back from display:none, the canvas may hand back an empty bitmap.
-watch(modalOpen, open => { if (!open) nextTick(paint); });
+// 关掉弹窗后同时确认对局时钟还在跑：隐藏页面或广告期间它被停掉了，得在这里接回来。
+watch(modalOpen, open => { if (!open) nextTick(() => { paint(); ensureClock(); }); });
 
 function syncView() {
   const s = game.state;
@@ -335,7 +373,7 @@ function onEvent(name) {
   if (name === 'won') {
     stopClock();
     isWon.value = true;
-    winLevelAction(view.level, view.score);
+    winLevelAction(view.level, view.score, isChallenge.value ? 2 : 1);
   }
   if (name === 'lost') {
     stopClock();
@@ -346,7 +384,8 @@ function onEvent(name) {
 function startClock() {
   stopClock();
   clockTimer = setInterval(() => {
-    if (paused.value) return;
+    // 暂停、购买补给、看广告期间对局倒计时一并冻结，不再只认 paused
+    if (modalOpen.value) return;
     if (!game.tick()) stopClock();
     view.remain = game.state.remain;
     view.combo = game.state.combo;
@@ -358,9 +397,24 @@ function stopClock() {
   clockTimer = null;
 }
 
+/* 只在确实需要时补一个时钟：已在跑、弹窗挡着、牌局已结束都不动。
+ * 发牌期间不直接起表，而是按发牌剩余时间排一个待启计时（句柄留着以便清理）。
+ * 页面隐藏会把这两者都停掉，回到前台时靠它按剩余时间接回来。 */
+function ensureClock() {
+  if (!game || clockTimer || modalOpen.value || game.state.over) return;
+  if (game.state.dealing) {
+    if (startClockTimer) return;
+    const left = Math.max(100, dealLength - (Date.now() - dealStart) + 100);
+    startClockTimer = setTimeout(() => { startClockTimer = null; startClock(); }, left);
+    return;
+  }
+  startClock();
+}
+
 /* Open and close are separate rather than one toggle: a tap on the dialog also
  * bubbles to the overlay, and two toggles would leave it right back open. */
 function onPause() {
+  if (!game || initError.value) return;
   paused.value = true;
 }
 
@@ -382,6 +436,9 @@ function nextLevel() {
 
 function exitToHome() {
   stopClock();
+  clearTimeout(startClockTimer);
+  startClockTimer = null;
+  abortAd();
   uni.navigateBack({
     fail: () => {
       uni.redirectTo({ url: '/pages/index/index' });
@@ -401,7 +458,8 @@ function exitToHome() {
  * itself, and is what puts the tap back where it belongs. */
 function onTouch(e) {
   const p = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
-  if (!p || !renderer || !metrics || game.state.dealing || paused.value || isWon.value || isLost.value) return;
+  if (!p || !game || !renderer || !metrics || initError.value) return;
+  if (game.state.dealing || paused.value || isWon.value || isLost.value) return;
   let x = p.x, y = p.y;
   if (x === undefined) {
     x = (p.clientX ?? p.pageX ?? 0) - boardRect.left;
@@ -411,18 +469,36 @@ function onTouch(e) {
   if (hit) game.pick(hit.id);
 }
 
+/* 对局里的道具数只是全局存档的一份副本（game-core 自己维护 state.tools），
+ * 所以每次消耗都要写回 gameState.tools，否则关掉页面道具就“复活”了。 */
+function pushToolsToGlobal() {
+  if (!game) return;
+  if (!gameState.tools) gameState.tools = {};
+  const tools = game.state.tools || {};
+  Object.keys(tools).forEach(k => { gameState.tools[k] = tools[k]; });
+}
+
+// 发放道具：全局存档与当前牌局同时加，两边保持一致
+function grantTool(name, count = 1) {
+  addTool(name, count);
+  if (game && game.state.tools) {
+    game.state.tools[name] = (game.state.tools[name] || 0) + count;
+  }
+}
+
 function handleToolClick(name) {
-  if (paused.value || isWon.value || isLost.value) return;
+  if (!game || initError.value || modalOpen.value) return;
   const count = view.tools[name] || 0;
   if (count <= 0 && !gameState.settings.gmMode) {
     openRefill(name);
     return;
   }
-  game.useTool(name);
+  if (game.useTool(name)) pushToolsToGlobal();
   syncView();
 }
 
 function openRefill(name) {
+  if (!game || initError.value) return;
   refillModal.tool = name;
   if (name === 'clear') {
     refillModal.title = '消除';
@@ -449,8 +525,9 @@ function openRefill(name) {
 }
 
 function buyToolWithCoins() {
+  if (!game) return;
   if (spendCoins(refillModal.price)) {
-    game.state.tools[refillModal.tool] = (game.state.tools[refillModal.tool] || 0) + 1;
+    grantTool(refillModal.tool, 1);
     refillModal.visible = false;
     syncView();
     uni.showToast({ title: '购买成功！' + refillModal.title + ' +1', icon: 'success' });
@@ -460,8 +537,9 @@ function buyToolWithCoins() {
 }
 
 function buyToolWithVideo() {
+  if (!game) return;
   triggerAd(() => {
-    game.state.tools[refillModal.tool] = (game.state.tools[refillModal.tool] || 0) + 1;
+    grantTool(refillModal.tool, 1);
     refillModal.visible = false;
     syncView();
     uni.showToast({ title: '获得 ' + refillModal.title + ' +1！', icon: 'success' });
@@ -479,85 +557,174 @@ function handleRevive() {
   });
 }
 
+/* 广告倒计时的 interval 必须留下引用：页面卸载或被切到后台时它还在跑，
+ * 会拿着已经失效的回调去动牌局。 */
+function abortAd() {
+  if (adTimer) { clearInterval(adTimer); adTimer = null; }
+  adCallback = null;
+  adActive.value = false;
+  adCountdown.value = 0;
+}
+
 function triggerAd(cb) {
+  if (adTimer) clearInterval(adTimer);
   adActive.value = true;
   adCountdown.value = 3;
   adCallback = cb;
-  const t = setInterval(() => {
+  adTimer = setInterval(() => {
     adCountdown.value--;
     if (adCountdown.value <= 0) {
-      clearInterval(t);
+      clearInterval(adTimer);
+      adTimer = null;
       adActive.value = false;
-      if (adCallback) adCallback();
+      const done = adCallback;
+      adCallback = null;
+      if (done) done();
     }
   }, 1000);
+}
+
+/* 每日挑战用更短的时限和更多花色，普通关沿用 game-core 的默认难度。
+ * gmMode 必须带进来：game-core 的 useTool 靠它决定是否消耗道具。 */
+function buildConfig(level) {
+  const config = { gmMode: !!gameState.settings.gmMode };
+  if (isChallenge.value) {
+    config.roundSeconds = CHALLENGE.roundSeconds;
+    const levels = [];
+    levels[level - 1] = { time: CHALLENGE.roundSeconds, types: CHALLENGE.types };
+    config.levels = levels;
+  }
+  return config;
 }
 
 function start(level) {
   // build() reports how long its deal takes; the clock starts when it lands,
   // and the hands sweep across exactly that window.
+  clearTimeout(startClockTimer);
+  startClockTimer = null;
   dealStart = Date.now();
-  const dealMs = game.build(level, boardSize.width / boardSize.height);
+  const dealMs = game.build(level, boardSize.width / boardSize.height, buildConfig(level));
+  // build 会把 tools 重置成默认值，这里改回玩家存档里的真实持有量
+  game.state.tools = { ...gameState.tools };
   dealLength = dealMs;
   metrics = boardMetrics(game.state.tiles, level, boardSize.width, boardSize.height);
   syncView();
   paint();
-  setTimeout(startClock, dealMs + 100);
+  ensureClock();
 }
 
-onMounted(async () => {
-  layoutTopBar();
-  // The top bar pads itself by the status-bar height, which shrinks the board
-  // below it. Let that land before measuring, or the pile is laid out for a
-  // board taller than the one it is drawn into.
-  await nextTick();
-  const pages = getCurrentPages();
-  const cur = pages[pages.length - 1];
-  const startLevel = (cur && cur.options && cur.options.level) ? parseInt(cur.options.level) : (gameState.currentLevel || 2);
+// 初始化失败时把首页已经扣掉的体力退回去，避免“没玩成还倒扣体力”
+let staminaRefunded = false;
+let rechargeOnSuccess = false;
 
-  const found = await resolveCanvas('#board', instance);
-  if (!found) return;
-  const { canvas, width, height } = found;
-  const dpr = uni.getWindowInfo ? uni.getWindowInfo().pixelRatio : uni.getSystemInfoSync().pixelRatio;
-  canvas.width = Math.round(width * dpr);
-  canvas.height = Math.round(height * dpr);
-  host = canvasHost(canvas);
-  const unit = host.measureUnitScale();
-  if (Math.abs(dpr / unit - 1) > 0.01) host.ctx.scale(dpr / unit, dpr / unit);
-  boardSize = { width, height };
-  boardRect = { left: found.left || 0, top: found.top || 0 };
+/* 初始化失败不再静默 return：停掉所有计时器、弹出可重试的提示，
+ * 并把体力退回（重试成功时再重新扣一次，保证一次对局只扣一点体力）。 */
+function failInit(message) {
+  stopClock();
+  clearTimeout(startClockTimer);
+  startClockTimer = null;
+  abortAd();
+  if (game) { game.destroy(); game = null; }
+  renderer = null;
+  metrics = null;
+  initError.value = message;
+  // gmMode 下首页本就没扣体力，不能退
+  if (!gameState.settings.gmMode && !staminaRefunded && refundStamina(1)) {
+    staminaRefunded = true;
+    rechargeOnSuccess = true;
+  }
+}
 
-  game = createGame({ motion: TileMotion, emit: createEmitter({ onEvent }) });
+async function initGame() {
+  initError.value = '';
+  try {
+    // The top bar pads itself by the status-bar height, which shrinks the board
+    // below it. Let that land before measuring, or the pile is laid out for a
+    // board taller than the one it is drawn into.
+    await nextTick();
+    const pages = getCurrentPages();
+    const cur = pages[pages.length - 1];
+    const options = (cur && cur.options) || {};
+    const wanted = parseInt(options.level, 10);
+    const startLevel = Number.isFinite(wanted) && wanted > 0 ? wanted : (gameState.currentLevel || 2);
+    isChallenge.value = options.mode === 'challenge';
 
-  // 初始化玩家道具数
-  game.state.tools = { ...gameState.tools };
+    const found = await resolveCanvas('#board', instance);
+    if (!found || !found.canvas) { failInit('牌桌画布初始化失败，请重试'); return; }
+    const { canvas, width, height } = found;
+    const dpr = uni.getWindowInfo().pixelRatio;
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    host = canvasHost(canvas);
+    const unit = host.measureUnitScale();
+    if (Math.abs(dpr / unit - 1) > 0.01) host.ctx.scale(dpr / unit, dpr / unit);
+    boardSize = { width, height };
+    boardRect = { left: found.left || 0, top: found.top || 0 };
 
-  /* Started before the atlas is awaited, not after, so the two load together.
-   * Queued behind the atlas it was still arriving when the deal began, and the
-   * hands missed the first stroke of the very first round after a cold start.
-   * It is deliberately not awaited: a missing hand must not cost us the deal. */
-  host.loadImage('/pkg-game/static/hands/right-hand-long.png')
-    .then(img => { handImage = img; })
-    .catch(() => {});
-  const atlas = await host.loadImage('/pkg-game/static/tile-poses/shells.png');
-  const faces = new Map(), pending = new Set();
-  const faceFor = type => {
-    const key = faceKey(type);
-    if (faces.has(key)) return faces.get(key);
-    if (!pending.has(key)) {
-      pending.add(key);
-      host.loadImage('/pkg-game/static/tiles-face/' + key + '.png')
-        .then(img => { faces.set(key, img); renderer && renderer.invalidate(); paint(); })
-        .catch(() => {});
+    game = createGame({ motion: TileMotion, emit: createEmitter({ onEvent }) });
+
+    /* Started before the atlas is awaited, not after, so the two load together.
+     * Queued behind the atlas it was still arriving when the deal began, and the
+     * hands missed the first stroke of the very first round after a cold start.
+     * It is deliberately not awaited: a missing hand must not cost us the deal. */
+    host.loadImage('/pkg-game/static/hands/right-hand-long.png')
+      .then(img => { handImage = img; })
+      .catch(() => {});
+    // 牌面图集是牌桌的必需品：加载不到就明确报错，而不是留一块空牌桌
+    const atlas = await host.loadImage('/pkg-game/static/tile-poses/shells.png');
+    if (!atlas) { failInit('牌面资源加载失败，请重试'); return; }
+    const faces = new Map(), pending = new Set();
+    const faceFor = type => {
+      const key = faceKey(type);
+      if (faces.has(key)) return faces.get(key);
+      if (!pending.has(key)) {
+        pending.add(key);
+        host.loadImage('/pkg-game/static/tiles-face/' + key + '.png')
+          .then(img => { faces.set(key, img); renderer && renderer.invalidate(); paint(); })
+          .catch(() => {});
+      }
+      return null;
+    };
+    renderer = createBoardRenderer(host.ctx, atlas, faceFor);
+    // 初始化时把全局道具同步进牌局（build 之后 start() 会再同步一次）
+    game.state.tools = { ...gameState.tools };
+    start(startLevel);
+    if (rechargeOnSuccess) {
+      rechargeOnSuccess = false;
+      consumeStamina(1);
     }
-    return null;
-  };
-  renderer = createBoardRenderer(host.ctx, atlas, faceFor);
-  start(startLevel);
+  } catch (e) {
+    failInit('牌桌加载失败，请重试');
+  }
+}
+
+function retryInit() {
+  initGame();
+}
+
+onMounted(() => {
+  layoutTopBar();
+  initGame();
+});
+
+// 页面被切到后台/卸载后，发牌回调、对局时钟和广告 interval 都必须停掉，
+// 否则它们会对着已经失效的牌局继续跑。
+onHide(() => {
+  stopClock();
+  clearTimeout(startClockTimer);
+  startClockTimer = null;
+  abortAd();
+});
+
+onShow(() => {
+  ensureClock();
 });
 
 onUnmounted(() => {
   stopClock();
+  clearTimeout(startClockTimer);
+  startClockTimer = null;
+  abortAd();
   if (game) game.destroy();
 });
 </script>

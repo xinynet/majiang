@@ -50,38 +50,76 @@
 
     <!-- 卡片详情/抽取弹窗 -->
     <view class="modal-overlay" v-if="selectedCard" @tap.self="selectedCard = null">
-      <view class="card-detail-dialog animate-pop">
+      <view class="card-detail-dialog animate-pop" @tap.stop>
         <view class="dialog-close" @tap="selectedCard = null">✕</view>
         <view class="detail-title">{{ selectedCard.name }}</view>
         <image class="detail-artwork" :src="'/pkg-cards/static/ui/' + selectedCard.image" mode="widthFix" />
         <view class="detail-prog">当前收集进度: {{ selectedCard.count }}/9</view>
+        <view class="detail-tip">重复碎片: {{ selectedCard.duplicates || 0 }} 张（已集满的卡册再次抽到会转为重复碎片）</view>
         <view class="detail-tip">集齐整套即可开启宝箱获得稀有奖励！</view>
-        <button class="draw-card-btn" @tap="drawSpecificCard(selectedCard)">
-          📺 看广告获得碎片 (+1)
+        <button class="draw-card-btn" :disabled="busy || adActive" @tap="drawSpecificCard(selectedCard)">
+          📺 观看本地演示广告获得碎片 (+1)
         </button>
       </view>
     </view>
 
     <!-- 辅助弹窗 (兑换屋 / 赛季商店 / 赛季收藏) -->
     <view class="modal-overlay" v-if="auxModal.visible" @tap.self="auxModal.visible = false">
-      <view class="aux-dialog animate-pop">
+      <view class="aux-dialog animate-pop" @tap.stop>
         <view class="dialog-close" @tap="auxModal.visible = false">✕</view>
         <view class="aux-dialog-title">{{ auxModal.title }}</view>
-        <view class="aux-dialog-content">
+
+        <!-- 兑换屋：选择重复碎片来源 + 未集满卡册目标 -->
+        <view class="aux-dialog-content" v-if="auxModal.type === 'exchange'">
           <text class="aux-content-desc">{{ auxModal.desc }}</text>
-          <button class="dialog-action-btn" @tap="handleAuxAction">
+          <view class="ex-section">
+            <view class="ex-label">1. 选择要消耗的重复碎片（每3张换1张）</view>
+            <view class="ex-chips" v-if="duplicateCards.length">
+              <view
+                class="ex-chip"
+                :class="{ 'ex-chip-on': exchangeSourceId === c.id }"
+                v-for="c in duplicateCards"
+                :key="'src-' + c.id"
+                @tap="selectExchangeSource(c.id)"
+              >{{ c.name }} ×{{ c.duplicates }}</view>
+            </view>
+            <view class="ex-empty" v-else>暂无重复碎片：重复抽到已集满的卡册即可获得。</view>
+          </view>
+          <view class="ex-section">
+            <view class="ex-label">2. 选择要兑换的卡册（未集满）</view>
+            <view class="ex-chips" v-if="incompleteCards.length">
+              <view
+                class="ex-chip"
+                :class="{ 'ex-chip-on': exchangeTargetId === c.id }"
+                v-for="c in incompleteCards"
+                :key="'dst-' + c.id"
+                @tap="selectExchangeTarget(c.id)"
+              >{{ c.name }} {{ c.count }}/9</view>
+            </view>
+            <view class="ex-empty" v-else>全部卡册均已集满，无需兑换。</view>
+          </view>
+          <button class="dialog-action-btn" :disabled="busy || adActive" @tap="handleAuxAction">
+            {{ auxModal.btnText }}
+          </button>
+        </view>
+
+        <!-- 赛季商店 / 赛季收藏 -->
+        <view class="aux-dialog-content" v-else>
+          <text class="aux-content-desc">{{ auxModal.desc }}</text>
+          <button class="dialog-action-btn" :disabled="busy || adActive" @tap="handleAuxAction">
             {{ auxModal.btnText }}
           </button>
         </view>
       </view>
     </view>
 
-    <!-- 模拟激励视频广告播放浮层 -->
+    <!-- 本地演示广告播放浮层（非真实广告投放，仅前端模拟） -->
     <view class="ad-overlay" v-if="adActive">
       <view class="ad-box">
-        <view class="ad-countdown">广告播放中... {{ adCountdown }}s</view>
+        <view class="ad-countdown">本地演示广告 {{ adCountdown }}s</view>
         <text class="ad-icon">🎬</text>
         <text class="ad-title">抽取冬日集卡碎片中...</text>
+        <text class="ad-title">（本地演示广告，非真实广告）</text>
         <view class="ad-progress">
           <view class="ad-progress-bar" :style="{ width: ((3 - adCountdown) / 3 * 100) + '%' }"></view>
         </view>
@@ -91,12 +129,99 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed, onUnmounted } from 'vue';
 import { gameState, addCoins } from '../../../game/state.js';
+
+const CARD_TARGET = 9;            // 每套卡册集齐所需碎片数
+const EXCHANGE_COST = 3;          // 兑换屋：每 3 张重复碎片换 1 张自选碎片
+const COMPLETE_REWARD_COINS = 100; // 集齐奖励（仅发放一次）
+const SEASON_SHOP_COST = 200;     // 赛季商店卡包售价
+const AD_SECONDS = 3;             // 本地演示广告时长
+
+// #region cards-pure-logic
+// 纯逻辑区：只读写传入的卡册数组，不触碰 uni / gameState，可被 mp-tools/cards-regression.cjs 提取测试。
+function ensureCardFields(c) {
+  if (!c || typeof c !== 'object') return c;
+  if (typeof c.duplicates !== 'number' || !isFinite(c.duplicates) || c.duplicates < 0) {
+    c.duplicates = 0;
+  }
+  if (typeof c.rewardClaimed !== 'boolean') {
+    // 兼容旧存档：已经集满的卡册视为已领过奖励，避免重复补发
+    c.rewardClaimed = typeof c.count === 'number' && c.count >= CARD_TARGET;
+  }
+  return c;
+}
+
+function findCardById(album, cardId) {
+  if (!Array.isArray(album)) return null;
+  return album.find(c => c && c.id === cardId) || null;
+}
+
+function countCompletedSets(album) {
+  if (!Array.isArray(album)) return 0;
+  return album.filter(c => c && typeof c.count === 'number' && c.count >= CARD_TARGET).length;
+}
+
+// 抽到一张碎片：未集满则 count+1（跨过阈值时一次性发奖）；已集满则记入 duplicates，不再发金币
+function drawFragment(album, cardId) {
+  const c = findCardById(album, cardId);
+  if (!c) return { ok: false, reason: 'missing' };
+  ensureCardFields(c);
+  if (c.count >= CARD_TARGET) {
+    c.duplicates += 1;
+    return { ok: true, duplicate: true, card: c, count: c.count, duplicates: c.duplicates, rewardGranted: false };
+  }
+  c.count += 1;
+  let rewardGranted = false;
+  if (c.count >= CARD_TARGET && !c.rewardClaimed) {
+    c.rewardClaimed = true;
+    rewardGranted = true;
+  }
+  return {
+    ok: true,
+    duplicate: false,
+    card: c,
+    count: c.count,
+    duplicates: c.duplicates,
+    completed: c.count >= CARD_TARGET,
+    rewardGranted
+  };
+}
+
+function pickRandomCardId(album, rand) {
+  if (!Array.isArray(album) || album.length === 0) return null;
+  const r = typeof rand === 'function' ? rand() : Math.random();
+  const idx = Math.min(album.length - 1, Math.max(0, Math.floor(r * album.length)));
+  const c = album[idx];
+  return c ? c.id : null;
+}
+
+// 兑换：消耗 source 的 3 张重复碎片，给 target 增加 1 张碎片；任何失败都不扣减
+function exchangeFragment(album, sourceCardId, targetCardId) {
+  const src = findCardById(album, sourceCardId);
+  const dst = findCardById(album, targetCardId);
+  if (!src || !dst) return { ok: false, reason: 'missing' };
+  ensureCardFields(src);
+  ensureCardFields(dst);
+  if (src.id === dst.id) return { ok: false, reason: 'same' };
+  if (src.duplicates < EXCHANGE_COST) {
+    return { ok: false, reason: 'insufficient', need: EXCHANGE_COST, have: src.duplicates };
+  }
+  if (dst.count >= CARD_TARGET) return { ok: false, reason: 'target_full' };
+  src.duplicates -= EXCHANGE_COST;
+  const drawn = drawFragment(album, dst.id);
+  return { ok: true, consumed: EXCHANGE_COST, source: src.id, target: dst.id, ...drawn };
+}
+// #endregion cards-pure-logic
 
 const selectedCard = ref(null);
 const adActive = ref(false);
-const adCountdown = ref(3);
+const adCountdown = ref(AD_SECONDS);
+const busy = ref(false);              // 抽卡/兑换进行中，防止重复触发
+const exchangeSourceId = ref('');
+const exchangeTargetId = ref('');
+
+let adTimer = null;
 
 const auxModal = reactive({
   visible: false,
@@ -106,6 +231,13 @@ const auxModal = reactive({
   btnText: '确定'
 });
 
+const album = computed(() => gameState.cardsAlbum || []);
+const duplicateCards = computed(() =>
+  album.value.filter(c => c && (c.duplicates || 0) > 0).sort((a, b) => b.duplicates - a.duplicates)
+);
+const incompleteCards = computed(() => album.value.filter(c => c && (c.count || 0) < CARD_TARGET));
+const completedSets = computed(() => countCompletedSets(album.value));
+
 function goBack() {
   uni.navigateBack({
     fail: () => {
@@ -114,17 +246,62 @@ function goBack() {
   });
 }
 
+function stopAdTimer() {
+  if (adTimer) {
+    clearInterval(adTimer);
+    adTimer = null;
+  }
+}
+
 function runAd(cb) {
+  stopAdTimer();
   adActive.value = true;
-  adCountdown.value = 3;
-  const t = setInterval(() => {
+  adCountdown.value = AD_SECONDS;
+  adTimer = setInterval(() => {
     adCountdown.value--;
     if (adCountdown.value <= 0) {
-      clearInterval(t);
+      stopAdTimer();
       adActive.value = false;
       cb();
     }
   }, 1000);
+}
+
+onUnmounted(() => {
+  stopAdTimer();
+  adActive.value = false;
+  busy.value = false;
+});
+
+function beginAction() {
+  if (busy.value || adActive.value) return false;
+  busy.value = true;
+  return true;
+}
+
+function endAction() {
+  busy.value = false;
+}
+
+// 同步「卡册大满贯」长期任务进度
+function syncAlbumProgress() {
+  const sets = countCompletedSets(album.value);
+  const task = (gameState.longTasks || []).find(t => t.id === 'long_card9');
+  if (task) task.current = Math.min(task.target || CARD_TARGET, sets);
+  return sets;
+}
+
+function announceDraw(res, cardName) {
+  if (!res || !res.ok) return;
+  syncAlbumProgress();
+  if (res.rewardGranted) {
+    addCoins(COMPLETE_REWARD_COINS);
+    uni.showToast({ title: '集齐【' + cardName + '】！+' + COMPLETE_REWARD_COINS + '金币', icon: 'success' });
+  } else if (res.duplicate) {
+    uni.showToast({ title: '已集满，转为重复碎片×1（共' + res.duplicates + '）', icon: 'none' });
+  } else {
+    uni.showToast({ title: '获得【' + cardName + '】碎片 x1', icon: 'success' });
+  }
 }
 
 function inspectCard(c) {
@@ -132,57 +309,126 @@ function inspectCard(c) {
 }
 
 function drawSpecificCard(c) {
+  if (!c || !beginAction()) return;
   runAd(() => {
-    c.count = Math.min(9, c.count + 1);
-    if (c.count >= 9) {
-      addCoins(100);
-      uni.showToast({ title: '恭喜集齐【' + c.name + '】！获得100金币！', icon: 'success' });
-    } else {
-      uni.showToast({ title: '获得【' + c.name + '】碎片 x1', icon: 'success' });
+    try {
+      const res = drawFragment(album.value, c.id);
+      announceDraw(res, c.name);
+      selectedCard.value = null;
+    } finally {
+      endAction();
     }
-    selectedCard.value = null;
   });
 }
 
+// 视频宝箱：随机一张碎片，同样走集齐奖励逻辑
 function drawCardVideo() {
+  if (!beginAction()) return;
   runAd(() => {
-    const list = gameState.cardsAlbum;
-    const randomCard = list[Math.floor(Math.random() * list.length)];
-    randomCard.count = Math.min(9, randomCard.count + 1);
-    uni.showToast({ title: '宝箱开启！获得【' + randomCard.name + '】碎片', icon: 'success' });
+    try {
+      const id = pickRandomCardId(album.value);
+      const card = findCardById(album.value, id);
+      if (!card) return;
+      const res = drawFragment(album.value, id);
+      announceDraw(res, card.name);
+    } finally {
+      endAction();
+    }
   });
+}
+
+// 赛季商店：扣款后直接发放碎片，不播放广告
+function buySeasonPack() {
+  if (!beginAction()) return;
+  try {
+    if ((gameState.coins || 0) < SEASON_SHOP_COST) {
+      uni.showToast({ title: '金币不足！可以通过通关获取金币', icon: 'none' });
+      return;
+    }
+    const id = pickRandomCardId(album.value);
+    const card = findCardById(album.value, id);
+    if (!card) {
+      uni.showToast({ title: '卡册数据异常，请稍后重试', icon: 'none' });
+      return;
+    }
+    gameState.coins -= SEASON_SHOP_COST;
+    const res = drawFragment(album.value, id);
+    auxModal.visible = false;
+    announceDraw(res, card.name);
+  } finally {
+    endAction();
+  }
+}
+
+function confirmExchange() {
+  if (!beginAction()) return;
+  try {
+    const src = findCardById(album.value, exchangeSourceId.value);
+    const dst = findCardById(album.value, exchangeTargetId.value);
+    if (!src || !dst) {
+      uni.showToast({ title: '请先选择重复碎片与兑换目标', icon: 'none' });
+      return;
+    }
+    const res = exchangeFragment(album.value, src.id, dst.id);
+    if (!res.ok) {
+      if (res.reason === 'insufficient') {
+        uni.showToast({ title: '重复碎片不足，需' + res.need + '张（当前' + res.have + '张）', icon: 'none' });
+      } else if (res.reason === 'same') {
+        uni.showToast({ title: '不能兑换同一套卡册', icon: 'none' });
+      } else if (res.reason === 'target_full') {
+        uni.showToast({ title: '该卡册已集满，无需兑换', icon: 'none' });
+      } else {
+        uni.showToast({ title: '兑换失败，请重试', icon: 'none' });
+      }
+      return;
+    }
+    if (src.duplicates <= 0) exchangeSourceId.value = '';
+    syncAlbumProgress();
+    uni.showToast({ title: '兑换成功！获得【' + dst.name + '】碎片', icon: 'success' });
+  } finally {
+    endAction();
+  }
 }
 
 function openAuxModal(type) {
   auxModal.type = type;
   if (type === 'exchange') {
+    const dups = duplicateCards.value;
+    exchangeSourceId.value = dups.length ? dups[0].id : '';
+    exchangeTargetId.value = incompleteCards.value.length ? incompleteCards.value[0].id : '';
     auxModal.title = '兑换屋';
-    auxModal.desc = '可使用多余的重复卡片碎片兑换万能卡片！每3张重复卡片可兑换1张自选碎片。';
-    auxModal.btnText = '兑换碎片';
+    auxModal.desc = '消耗3张重复碎片，兑换1张自选卡册碎片。';
+    auxModal.btnText = '确认兑换';
   } else if (type === 'seasonShop') {
     auxModal.title = '赛季商店';
-    auxModal.desc = '消耗赛季积分或金币可直接购买冬日限定卡包与绝版装饰！';
-    auxModal.btnText = '购买卡包 (🪙 200)';
+    auxModal.desc = '消耗 ' + SEASON_SHOP_COST + ' 金币直接购买冬日限定卡包，立即获得1张随机碎片（本地演示，无真实广告）。';
+    auxModal.btnText = '购买卡包 (🪙 ' + SEASON_SHOP_COST + ')';
   } else if (type === 'collection') {
     auxModal.title = '赛季收藏';
-    auxModal.desc = '已达成赛季收集进度：' + gameState.cardsAlbum.filter(c => c.count >= 9).length + '/9 套。集齐全部9套即可获得限定金杯称号！';
+    auxModal.desc = '已达成赛季收集进度：' + completedSets.value + '/' + CARD_TARGET + ' 套。集齐全部' + CARD_TARGET + '套即可获得限定金杯称号！';
     auxModal.btnText = '我知道了';
   }
   auxModal.visible = true;
 }
 
+function selectExchangeSource(id) {
+  exchangeSourceId.value = id;
+}
+
+function selectExchangeTarget(id) {
+  exchangeTargetId.value = id;
+}
+
 function handleAuxAction() {
-  if (auxModal.type === 'seasonShop') {
-    if (gameState.coins >= 200) {
-      gameState.coins -= 200;
-      drawCardVideo();
-      auxModal.visible = false;
-    } else {
-      uni.showToast({ title: '金币不足！可以通过通关获取金币', icon: 'none' });
-    }
-  } else {
-    auxModal.visible = false;
+  if (auxModal.type === 'exchange') {
+    confirmExchange();
+    return;
   }
+  if (auxModal.type === 'seasonShop') {
+    buySeasonPack();
+    return;
+  }
+  auxModal.visible = false;
 }
 </script>
 
@@ -271,13 +517,12 @@ function handleAuxAction() {
   border-radius: 20rpx;
 }
 
-/* 赛季标签 (冬日欢乐) */
+/* 赛季标签 (冬日欢乐)：保持静态层级，不遮挡赛季商店热区 */
 .season-tab-row {
   display: flex;
   justify-content: center;
   margin: 20rpx 0 20rpx;
 }
-
 .season-pill-btn {
   background: #f97316;
   color: #fff;
@@ -308,8 +553,10 @@ function handleAuxAction() {
   font-weight: 900;
 }
 
-/* 9套卡片网格 (3x3) */
+/* 9套卡片网格 (3x3)：层级高于赛季商店热区，保证首行卡片点击不被热区截获 */
 .cards-grid {
+  position: relative;
+  z-index: 21;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 18rpx;
@@ -422,6 +669,56 @@ function handleAuxAction() {
   color: #ffffff;
   font-size: 32rpx;
   font-weight: 900;
+}
+
+/* 兑换屋：来源/目标选择 */
+.aux-dialog-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ex-section {
+  width: 100%;
+  margin-bottom: 20rpx;
+}
+
+.ex-label {
+  font-size: 26rpx;
+  font-weight: 900;
+  color: #7c2d12;
+  margin-bottom: 12rpx;
+}
+
+.ex-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  max-height: 240rpx;
+  overflow-y: auto;
+}
+
+.ex-chip {
+  padding: 10rpx 22rpx;
+  border-radius: 30rpx;
+  background: #fef3c7;
+  border: 4rpx solid #fdba74;
+  color: #7c2d12;
+  font-size: 26rpx;
+  font-weight: 900;
+}
+
+.ex-chip-on {
+  background: #fb923c;
+  border-color: #7c2d12;
+  color: #ffffff;
+}
+
+.ex-empty {
+  font-size: 24rpx;
+  color: #a16207;
+  line-height: 1.5;
 }
 
 /* 广告模拟播放层 */

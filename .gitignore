@@ -10,3 +10,7 @@ mp-tools/static-out/
 mp-tools/node_modules/
 mp-tools/fit200/
 mp-tools/subpkg-check/
+# 预览图与实机截图是每次跑脚本重新生成的产物，不进仓库
+mp-tools/work/
+# 后台统计是运行期累积出来的数据，不是源码
+server/data/game-stats.json
