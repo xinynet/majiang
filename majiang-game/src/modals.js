@@ -737,6 +737,13 @@ function createModals() {
     refill: drawRefill, aux: drawAux,
   };
 
+  /* 抽成普通函数而不是只挂在返回对象上：下面几个触摸处理器里原本写的是 `this.isOpen()`，
+   * 那依赖调用方一定带着接收者（modals.onTouchEnd(p)）。小游戏的代码包在真机/开发者工具里
+   * 可能跑在严格模式下，一旦有人把方法解构出去用（`const { onTouchEnd } = modals`），
+   * `this` 就是 undefined，直接 TypeError。浏览器预览的打包器会替我们「归一化」这类
+   * 松散 this，所以预览里看不出问题——干脆不依赖 this。 */
+  const isOpen = () => !!active || ad.active;
+
   return {
     preload: () => loadImages(ART),
     open,
@@ -744,7 +751,7 @@ function createModals() {
     openConfirm,
     playAd,
     staminaTip,
-    isOpen: () => !!active || ad.active,
+    isOpen,
     /** 场景每帧调一次，放在自己的内容画完之后。 */
     draw(ctx) {
       if (active && DRAW[active]) {
@@ -765,7 +772,7 @@ function createModals() {
     /* 触摸：返回 true 表示这一下被弹窗吃了，场景别再自己处理。
      * 滚动和点击靠位移量区分——手指动过 8px 以上就当滑动，不触发按钮。 */
     onTouchStart(p) {
-      if (!this.isOpen()) return false;
+      if (!isOpen()) return false;
       scroll.moved = 0;
       if (scroll.rect && p.y >= scroll.rect.y && p.y <= scroll.rect.y + scroll.rect.h) {
         scroll.dragging = true;
@@ -774,7 +781,7 @@ function createModals() {
       return true;
     },
     onTouchMove(p) {
-      if (!scroll.dragging) return this.isOpen();
+      if (!scroll.dragging) return isOpen();
       const dy = p.y - scroll.lastY;
       scroll.lastY = p.y;
       scroll.moved += Math.abs(dy);
@@ -782,7 +789,7 @@ function createModals() {
       return true;
     },
     onTouchEnd(p) {
-      if (!this.isOpen()) return false;
+      if (!isOpen()) return false;
       const dragged = scroll.dragging && scroll.moved > vh(1);
       scroll.dragging = false;
       if (!dragged) tap(p);
