@@ -30,6 +30,14 @@
  * 2. 把 `API_BASE` 换成线上的 **https** 地址，并在小游戏后台「开发设置 - 服务器域名」
  *    里把它加进 request 合法域名。没配的话 `wx.request` 会直接失败，
  *    客户端会安静地退回缓存/默认配置（不会白屏，但后台就管不着它了）。
+ *
+ * ## 浏览器预览里为什么永远拉不到后台
+ *
+ * 预览垫片**有** `wx.request`（也有 `createRewardedVideoAd`），但它会把请求重写到
+ * 预览服务自己的源上：实测 `http://localhost:3000/api/ads` 直接 curl 是 200，
+ * 从游戏里发出去拿回来的却是预览服务的 **404**。所以预览里 provider 永远停在兜底的
+ * `mock`，后台改了不会生效——这不是 bug，验广告配置要用
+ * `mp-tools/ads-check.cjs`（Node 里直连后台）或真机。
  */
 const PLACEMENTS = {
   luckyBag: '首页 · 幸运礼包解锁',
@@ -105,6 +113,12 @@ function init() {
             config = { ...FALLBACK, ...body.data };
             storage(CACHE_KEY, config);
             console.log('[ads] 配置已更新', config.provider, config.enabled ? '开启' : '关闭');
+          } else {
+            /* 连上了但不是我们要的东西——最常见的是 404：浏览器预览的 wx 垫片会把
+             * 请求重写到预览服务自己的源上，于是永远拿不到后台。把状态码打出来，
+             * 否则这种情况和「后台没开」长得一模一样。 */
+            console.warn('[ads] 配置接口返回了非预期内容，继续用缓存/默认值。HTTP '
+              + ((res && res.statusCode) || '?') + ' from ' + apiBase());
           }
           finish();
         },

@@ -1313,8 +1313,12 @@ cards# detail exchange seasonShop collection
 
 ## 四、怎么验的
 
-浏览器预览的 wx 垫片**既没有 `wx.request` 也没有 `createRewardedVideoAd`**，
-真实链路在预览里根本走不到（现在会打一行 `[ads] 当前运行环境没有 wx.request` 说明这件事）。
+浏览器预览连不上运营后台。一开始我判断成「垫片没有 `wx.request`」，**这是错的**，
+后来在游戏里打了个探针才问清楚：垫片既有 `wx.request` 也有 `createRewardedVideoAd`，
+但它把请求**重写到了预览服务自己的源**上——同一个 `http://localhost:3000/api/ads`，
+curl 是 200，游戏里拿回来的是预览服务的 **404**。
+所以预览里 provider 永远停在兜底的 `mock`，后台改了不会生效。
+（教训：跨进程的东西「没反应」时，先让被测方自己把它看到的结果说出来，别靠推断。）
 所以广告这块不靠肉眼点，靠 `mp-tools/ads-check.cjs`：把 ads.js 放进一个 wx 桩里，
 把「微信会怎么回调」演一遍，9 节 30 条断言覆盖上面四个坑 + 开关矩阵 + 间隔拦截 + 上报格式。
 其中第 1 节是真的去 GET 本机 server 的 `/api/ads`，上报也是真的打到 `/api/stats`——

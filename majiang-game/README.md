@@ -124,8 +124,9 @@ node server/admin-check.cjs     # 后台页面自检：脚本语法、id、广�
 ## 已知问题
 
 - 首页中段有一大片空白，这是首页母版本来的排布，不是移植引入的。
-- 浏览器预览的 wx 垫片没有 `wx.request`，也没有 `createRewardedVideoAd`，所以预览里
-  永远走本地模拟那条路，后台改了也不会生效（控制台会打一行 `[ads] 当前运行环境没有
-  wx.request`）。真实链路靠 `mp-tools/ads-check.cjs` 用桩覆盖，最终仍需真机验证。
+- 浏览器预览里拉不到运营后台：垫片**有** `wx.request`，但会把请求重写到预览服务自己的
+  源上——实测 `http://localhost:3000/api/ads` 直接 curl 是 200，从游戏里发出去拿回来的
+  是预览服务的 404。所以预览里 provider 永远停在兜底的 `mock`，后台改了不会生效。
+  验广告配置要用 `mp-tools/ads-check.cjs`（Node 里直连后台）或真机。
 - 集卡页九张卡按剩余高度收缩以求一屏放下；小程序那边外面套的是 `<scroll-view>`。
   卡片多到放不下时要改成自己实现滚动。
