@@ -60,6 +60,10 @@ const DEFAULT_STATE = {
   /* 每日一关的本地状态：date 是上次发次数的本地日期（YYYY-MM-DD），left 是今天还剩几次。
    * 跨天补次数的逻辑在 src/daily.js，不在这里——那边是纯函数，能单测。 */
   dailyLevel: { date: '', left: 1 },
+  /* 红点用的「看过没有」。只记那些没有别的状态可依据的入口——
+   * 每日挑战看剩余次数、每日任务看有没有可领的、添加桌面看奖励领没领，
+   * 都不用记；只有主题装扮本身没有任何状态，才需要这么一个标记。 */
+  badgesSeen: { theme: false },
   levelChest: { current: 1, target: 5 },
   starChest: { current: 3, target: 500 },
   piggyBank: { coins: 25, minClaim: 300, maxCapacity: 600 },

@@ -76,6 +76,39 @@ function createHomeScene(makeBoardScene, makeCardsScene, debugModal) {
     replaceScene(makeBoardScene(), { level: gameState.currentLevel || 1 });
   }
 
+  /* 红点：有事可做才点，做完就灭。这几条判断就是「有事可做」的定义——
+   * 别在这里写死 true，否则红点永远在，玩家很快就学会忽略它。 */
+  function needsBadge(key) {
+    const s = gameState;
+    switch (key) {
+      case 'tileChallenge':
+        return daily.attemptsLeft() > 0;                       // 今天还没挑战过
+      case 'tileTask':
+        return (s.dailyTasks || []).concat(s.longTasks || [])
+          .some((t) => !t.claimed && t.current >= t.target);    // 有任务能领了
+      case 'tileDesktop':
+        return !s.desktopRewardClaimed;                        // 添加桌面的奖励还没拿
+      case 'tileTheme':
+        return !(s.badgesSeen && s.badgesSeen.theme);          // 没点开看过
+      default:
+        return false;
+    }
+  }
+
+  /** 右上角那颗红点。白描边是为了压在花花绿绿的图标上也看得清。 */
+  function drawBadge(ctx, box) {
+    const r = Math.max(box.w, box.h) * 0.11;
+    const cx = box.x + box.w - r * 0.9;
+    const cy = box.y + r * 0.9;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#ef4444';
+    ctx.fill();
+    ctx.lineWidth = Math.max(1, r * 0.22);
+    ctx.strokeStyle = '#fff';
+    ctx.stroke();
+  }
+
   /** 弹窗要的那三样：后台下发的展示数值、今天剩几次、点按钮干什么。 */
   function dailyPayload() {
     return { config: daily.current(), attemptsLeft: daily.attemptsLeft(), onGo: startDailyChallenge };
@@ -130,7 +163,11 @@ function createHomeScene(makeBoardScene, makeCardsScene, debugModal) {
       case 'tilePiggy': return () => modals.open('piggy');
       case 'tileTask': return () => modals.open('tasks');
       case 'tileShop': return () => modals.open('shop');
-      case 'tileTheme': return () => toast('主题装扮已解锁默认「田园暖阳」皮肤！');
+      case 'tileTheme': return () => {
+        if (!gameState.badgesSeen) gameState.badgesSeen = { theme: false };
+        gameState.badgesSeen.theme = true;                      // 看过就灭红点
+        toast('主题装扮已解锁默认「田园暖阳」皮肤！');
+      };
       case 'tileDesktop': return () => modals.open('desktop');
       /* 顶栏点的是体力：满了说一声，没满给补满入口，和小程序 showStaminaTip 一致。 */
       case 'topbar': return () => modals.staminaTip();
@@ -170,6 +207,7 @@ function createHomeScene(makeBoardScene, makeCardsScene, debugModal) {
         const box = boxOf(s.css);
         drawFill(ctx, img(s.key), box);
         hit(box, handlerFor(s.key));
+        if (needsBadge(s.key)) drawBadge(ctx, box);
 
         for (const [slotKey, slot] of Object.entries(s.slots || {})) {
           const str = slotText(s.key, slotKey);
