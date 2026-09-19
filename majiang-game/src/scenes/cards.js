@@ -20,7 +20,7 @@ const {
   countCompletedSets, drawFragment, pickRandomCardId, findCardById, exchangeFragment, ensureCardFields,
 } = require('../game/cards-core.js');
 const { createModals } = require('../modals.js');
-const { screen } = require('../screen.js');
+const { viewport } = require('../screen.js');
 const { replaceScene } = require('../app.js');
 const { toast } = require('../platform.js');
 const {
@@ -155,8 +155,8 @@ function createCardsScene(makeHomeScene, debugModal) {
 
   function drawDetail(ctx) {
     ctx.fillStyle = 'rgba(0,0,0,.6)';
-    ctx.fillRect(0, 0, screen.W, screen.H);
-    hit({ x: 0, y: 0, w: screen.W, h: screen.H }, () => { selected = null; });
+    ctx.fillRect(0, 0, viewport.W, viewport.H);
+    hit({ x: 0, y: 0, w: viewport.W, h: viewport.H }, () => { selected = null; });
 
     /* 面板比第一版高 6vh：底下多了「看广告得碎片」按钮，不加高的话
      * 「集齐整套即可开启宝箱」那行会被按钮压住。 */
@@ -213,18 +213,18 @@ function createCardsScene(makeHomeScene, debugModal) {
     draw(ctx) {
       beginFrame();
       ctx.fillStyle = '#2f5d4f';
-      ctx.fillRect(0, 0, screen.W, screen.H);
+      ctx.fillRect(0, 0, viewport.W, viewport.H);
 
       if (!ready) {
-        text(ctx, '加载中…', screen.W / 2, screen.H / 2, { size: rem(1.1) });
+        text(ctx, '加载中…', viewport.W / 2, viewport.H / 2, { size: rem(1.1) });
         return;
       }
 
       // 头图：铺满屏宽、按原比例定高，从安全区下面开始
       const disc = img('cards_top_disc');
       discRect = {
-        x: 0, y: screen.safeTop, w: screen.W,
-        h: disc ? screen.W * disc.height / disc.width : vh(24),
+        x: 0, y: viewport.safeTop, w: viewport.W,
+        h: disc ? viewport.W * disc.height / disc.width : vh(24),
       };
       if (disc) ctx.drawImage(disc, discRect.x, discRect.y, discRect.w, discRect.h);
 
@@ -238,7 +238,7 @@ function createCardsScene(makeHomeScene, debugModal) {
 
       const list = album();
       const collected = list.filter((c) => c.count > 0).length;
-      const pill = { x: (screen.W - vw(44)) / 2, y: discRect.y + discRect.h + vh(1.4), w: vw(44), h: vh(4) };
+      const pill = { x: (viewport.W - vw(44)) / 2, y: discRect.y + discRect.h + vh(1.4), w: vw(44), h: vh(4) };
       ctx.fillStyle = 'rgba(255,196,61,.95)';
       roundRect(ctx, pill, pill.h / 2);
       ctx.fill();
@@ -250,8 +250,8 @@ function createCardsScene(makeHomeScene, debugModal) {
       const gridTop = pill.y + pill.h + vh(2);
       const gap = vw(3);
       const rowGap = vh(1.6);
-      const cw = (screen.W - vw(8) - gap * 2) / 3;
-      const avail = screen.H - screen.safeBottom - vh(2) - gridTop;
+      const cw = (viewport.W - vw(8) - gap * 2) / 3;
+      const avail = viewport.H - viewport.safeBottom - vh(2) - gridTop;
       const ch = Math.min(cw * 1.42, (avail - rowGap * 2) / 3);
 
       list.forEach((card, i) => {

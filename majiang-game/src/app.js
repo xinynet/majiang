@@ -4,7 +4,7 @@
  * 小游戏一样都没有，只有一块 wx.createCanvas() 给的画布，所以全部自己来。
  * 画布本身与坐标系约定在 screen.js。
  */
-const { screen } = require('./screen.js');
+const { viewport } = require('./screen.js');
 const { toastLayer } = require('./platform.js');
 const { drawToast } = require('./ui.js');
 const { saveNow } = require('./store.js');
@@ -16,7 +16,7 @@ let running = false;
 
 /** 逻辑像素的触摸点 → 物理像素。 */
 function toLocal(touch) {
-  return { x: touch.clientX * screen.dpr, y: touch.clientY * screen.dpr };
+  return { x: touch.clientX * viewport.dpr, y: touch.clientY * viewport.dpr };
 }
 
 /* 场景接口（全部可选）：
@@ -69,7 +69,7 @@ function frame(now) {
   applyPending();
   if (!current) return;
 
-  const ctx = screen.ctx;
+  const ctx = viewport.ctx;
   if (current.update) {
     try { current.update(dt, now); } catch (e) { console.error('[scene.update]', e); }
   }

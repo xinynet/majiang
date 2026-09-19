@@ -55,7 +55,7 @@ node mp-tools/minigame-mcp.cjs logs --lines 50
 
 ```
 game.js                入口：场景工厂 + 帧循环启动
-src/screen.js          画布与坐标系（物理像素作画，见文件头注释）
+src/screen.js          画布与坐标系，导出 viewport（为什么不叫 screen 见文件头注释）
 src/app.js             帧循环、场景切换、触摸派发
 src/ui.js              canvas UI 原语：素材、尺寸、绘制、命中测试
 src/platform.js        game-core 事件的宿主实现（音效/震动/自绘 toast/画布）
@@ -69,7 +69,7 @@ static/                素材，2.4MB（主包共 2.6MB，小游戏上限 4MB）
 probe.js               旧的连通性探针，留作兜底
 ```
 
-## 移植时踩到的五件事
+## 移植时踩到的六件事
 
 1. **小游戏运行时是 CommonJS，不是 ESM。** `import` 直接 SyntaxError，全部用
    `require` / `module.exports`。小程序侧那五个玩法核心文件是 ESM 写的，搬过来做了
@@ -86,7 +86,16 @@ probe.js               旧的连通性探针，留作兜底
 4. **canvas 没有事件冒泡。** 弹窗遮罩必须自己登记成热区把点击吞掉，否则玩家在结算界面
    点到的是下面的牌。绘制和命中测试共用同一个 rect 对象，绝不各算一套。
 
-5. **没有 `scroll-view`，也没有 `switch`、`showModal`。** 任务/商城的长列表得自己接
+5. **模块顶层不能用 `screen` 这种名字。** 小游戏运行时把每个模块包在一个函数里执行，
+   那个作用域里已经有一个 `screen`（浏览器风格的全局）。我们的 `src/screen.js` 顶层
+   写了 `const screen = {...}`，于是加载期就是
+   `SyntaxError: Identifier 'screen' has already been declared` → 这个模块注册不上 →
+   所有 `require('./screen.js')` 跟着报 `module 'src/screen.js' is not defined` →
+   整个游戏起不来。**浏览器预览的打包器不注入这些名字，预览里完全正常**，只有装进
+   开发者工具/真机才暴露。现在那个对象叫 `viewport`，并且有
+   `mp-tools/minigame-lint.cjs` 盯着这一类撞名。
+
+6. **没有 `scroll-view`，也没有 `switch`、`showModal`。** 任务/商城的长列表得自己接
    onTouchMove 累加偏移 + `ctx.clip()` 裁可视区，还要靠位移量区分「滑动」和「点击」
    （动过 1vh 以上就不触发按钮）；开关、确认框、文字折行也都在 `modals.js` 里自绘。
 
@@ -111,6 +120,7 @@ probe.js               旧的连通性探针，留作兜底
 ```bash
 node mp-tools/ads-check.cjs     # 广告链路回归：用 wx 桩把每条分支跑一遍
 node server/admin-check.cjs     # 后台页面自检：脚本语法、id、广告配置往返
+node mp-tools/minigame-lint.cjs # 只在微信里才会炸的写法（撞名全局 / ESM / 忘关调试开关）
 ```
 
 **上线前必须做的两件事**（代码里做不了）：

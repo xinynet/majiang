@@ -5,7 +5,7 @@
  * ——画在哪、点哪儿生效，只要两边各算一次迟早对不上。所以这里的约定是：
  * 所有可点元素都走 hit() 登记，绘制和命中用的是同一个 rect 对象。
  */
-const { screen } = require('./screen.js');
+const { viewport } = require('./screen.js');
 
 /* ------------------------------------------------------------------ 素材 */
 
@@ -29,19 +29,19 @@ function img(key) { return images.get(key) || null; }
 /* ------------------------------------------------------------------ 尺寸 */
 
 /** 屏幕宽度的百分比 → 物理像素。UI 里一切横向尺寸都用它，不写死 px。 */
-const vw = (pct) => screen.W * pct / 100;
+const vw = (pct) => viewport.W * pct / 100;
 /** 屏幕高度的百分比 → 物理像素。 */
-const vh = (pct) => screen.H * pct / 100;
+const vh = (pct) => viewport.H * pct / 100;
 /** 字号基准：取屏幕宽度的 1/26，约等于小程序里 32rpx 的观感。 */
-const rem = (mult = 1) => screen.W / 26 * mult;
+const rem = (mult = 1) => viewport.W / 26 * mult;
 
 /** home-layout.js 的 css 百分比盒子 → 物理像素矩形。 */
 function boxOf(css) {
   return {
-    x: screen.W * css.left / 100,
-    y: screen.H * css.top / 100,
-    w: screen.W * css.width / 100,
-    h: screen.H * css.height / 100,
+    x: viewport.W * css.left / 100,
+    y: viewport.H * css.top / 100,
+    w: viewport.W * css.width / 100,
+    h: viewport.H * css.height / 100,
   };
 }
 
@@ -172,9 +172,9 @@ function tap(p) {
 function drawToast(ctx, str) {
   const pad = rem(0.7);
   ctx.font = `${rem(0.95)}px sans-serif`;
-  const w = Math.min(screen.W * 0.82, ctx.measureText(str).width + pad * 2.4);
+  const w = Math.min(viewport.W * 0.82, ctx.measureText(str).width + pad * 2.4);
   const h = rem(2.3);
-  const r = { x: (screen.W - w) / 2, y: screen.H * 0.62, w, h };
+  const r = { x: (viewport.W - w) / 2, y: viewport.H * 0.62, w, h };
   ctx.save();
   ctx.fillStyle = 'rgba(20,32,28,.86)';
   roundRect(ctx, r, h / 2);

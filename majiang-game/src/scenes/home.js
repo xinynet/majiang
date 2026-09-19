@@ -16,7 +16,7 @@ const {
   gameState, formatSeconds, formatLongSeconds, consumeStamina, startGlobalTimers, addCoins, addTool,
 } = require('../store.js');
 const { createModals } = require('../modals.js');
-const { screen } = require('../screen.js');
+const { viewport } = require('../screen.js');
 const { replaceScene } = require('../app.js');
 const { toast } = require('../platform.js');
 const {
@@ -135,13 +135,13 @@ function createHomeScene(makeBoardScene, makeCardsScene, debugModal) {
     draw(ctx) {
       beginFrame();
       ctx.fillStyle = '#7fb69b';
-      ctx.fillRect(0, 0, screen.W, screen.H);
+      ctx.fillRect(0, 0, viewport.W, viewport.H);
 
       const bg = img('bg_home');
-      if (bg) drawCover(ctx, bg, { x: 0, y: 0, w: screen.W, h: screen.H });
+      if (bg) drawCover(ctx, bg, { x: 0, y: 0, w: viewport.W, h: viewport.H });
 
       if (!ready) {
-        text(ctx, '加载中…', screen.W / 2, screen.H / 2, { size: rem(1.1) });
+        text(ctx, '加载中…', viewport.W / 2, viewport.H / 2, { size: rem(1.1) });
         return;
       }
 

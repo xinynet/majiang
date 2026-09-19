@@ -16,7 +16,7 @@ const { drawShuffleHands } = require('../game/shuffle-hands.js');
 const { canvasHost, createEmitter, toast } = require('../platform.js');
 const { gameState, winLevelAction, refundStamina, formatSeconds } = require('../store.js');
 const { createModals } = require('../modals.js');
-const { screen } = require('../screen.js');
+const { viewport } = require('../screen.js');
 const { replaceScene } = require('../app.js');
 const {
   img, loadImages, vw, vh, rem, text, textIn, roundRect,
@@ -59,18 +59,18 @@ function createBoardScene(homeSceneFactory, debugModal) {
   /* 一屏的纵向切分。全部按屏高百分比算，不写死 px——
    * 小游戏要覆盖从 16:9 到 21:9 的机型，写死的高度在长屏上会把牌桌压扁。 */
   function layout() {
-    const topBarY = screen.safeTop;
+    const topBarY = viewport.safeTop;
     const topBarH = vh(6);
     const statusY = topBarY + topBarH;
     const statusH = vh(3.4);
     const dockH = vh(11);
-    const dockY = screen.H - screen.safeBottom - dockH - vh(1);
+    const dockY = viewport.H - viewport.safeBottom - dockH - vh(1);
     const trayH = vh(7.2);
     const trayY = dockY - trayH - vh(3.2);
     return {
-      topBar: { x: 0, y: topBarY, w: screen.W, h: topBarH },
+      topBar: { x: 0, y: topBarY, w: viewport.W, h: topBarH },
       status: { x: vw(4), y: statusY, w: vw(92), h: statusH },
-      board: { x: 0, y: statusY + statusH + vh(0.6), w: screen.W, h: trayY - (statusY + statusH) - vh(2.4) },
+      board: { x: 0, y: statusY + statusH + vh(0.6), w: viewport.W, h: trayY - (statusY + statusH) - vh(2.4) },
       tray: { x: vw(4), y: trayY, w: vw(92), h: trayH },
       dock: { x: vw(3), y: dockY, w: vw(94), h: dockH },
     };
@@ -168,7 +168,7 @@ function createBoardScene(homeSceneFactory, debugModal) {
 
     // 倒计时
     const urgent = game.state.remain < 60;
-    const pill = { x: screen.W - vw(4) - vw(26), y: btn.y + btn.h * 0.12, w: vw(26), h: btn.h * 0.76 };
+    const pill = { x: viewport.W - vw(4) - vw(26), y: btn.y + btn.h * 0.12, w: vw(26), h: btn.h * 0.76 };
     ctx.fillStyle = urgent ? 'rgba(180,44,38,.82)' : 'rgba(12,44,36,.55)';
     roundRect(ctx, pill, pill.h / 2);
     ctx.fill();
@@ -257,8 +257,8 @@ function createBoardScene(homeSceneFactory, debugModal) {
    * 不挡的话玩家在结算界面点到的是下面的牌。 */
   function drawDialog(ctx, { title, desc, lines = [], buttons }) {
     ctx.fillStyle = 'rgba(0,0,0,.55)';
-    ctx.fillRect(0, 0, screen.W, screen.H);
-    hit({ x: 0, y: 0, w: screen.W, h: screen.H }, () => {});
+    ctx.fillRect(0, 0, viewport.W, viewport.H);
+    hit({ x: 0, y: 0, w: viewport.W, h: viewport.H }, () => {});
 
     const panel = { x: vw(12), y: vh(28), w: vw(76), h: vh(40) };
     ctx.fillStyle = '#f6efe0';
@@ -392,14 +392,14 @@ function createBoardScene(homeSceneFactory, debugModal) {
 
       // 背景：草地色打底 + 野餐布条，和小程序版 .g-meadow 的观感一致
       ctx.fillStyle = '#4e9c82';
-      ctx.fillRect(0, 0, screen.W, screen.H);
+      ctx.fillRect(0, 0, viewport.W, viewport.H);
       const meadow = img('meadow');
-      if (meadow) drawCover(ctx, meadow, { x: 0, y: 0, w: screen.W, h: screen.H * 0.42 });
+      if (meadow) drawCover(ctx, meadow, { x: 0, y: 0, w: viewport.W, h: viewport.H * 0.42 });
 
       if (phase === 'error' || !game) {
-        text(ctx, errorText || '加载中…', screen.W / 2, screen.H / 2, { size: rem(1.1) });
+        text(ctx, errorText || '加载中…', viewport.W / 2, viewport.H / 2, { size: rem(1.1) });
         if (errorText) {
-          const r = { x: vw(25), y: screen.H / 2 + vh(5), w: vw(50), h: vh(6) };
+          const r = { x: vw(25), y: viewport.H / 2 + vh(5), w: vw(50), h: vh(6) };
           ctx.fillStyle = '#55a297';
           roundRect(ctx, r, r.h / 2);
           ctx.fill();
@@ -418,7 +418,7 @@ function createBoardScene(homeSceneFactory, debugModal) {
       drawDock(ctx, L);
 
       if (game.state.dealing) {
-        text(ctx, '发牌中…', screen.W / 2, boardRect.y + boardRect.h * 0.5,
+        text(ctx, '发牌中…', viewport.W / 2, boardRect.y + boardRect.h * 0.5,
           { size: rem(1.1), color: 'rgba(255,255,255,.9)', stroke: 'rgba(8,36,28,.5)' });
       }
 

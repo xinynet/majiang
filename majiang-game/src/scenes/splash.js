@@ -7,7 +7,7 @@
  * 进度条不是装饰：它遮的是首页 15 张精灵的预加载。加载完之前就跳首页，
  * 玩家会看着按钮一个个蹦出来。
  */
-const { screen } = require('../screen.js');
+const { viewport } = require('../screen.js');
 const { replaceScene } = require('../app.js');
 const { img, loadImages, vw, vh, rem, text, roundRect, drawCover, drawContain } = require('../ui.js');
 const { buildLayout } = require('../home-layout.js');
@@ -73,16 +73,16 @@ function createSplashScene(makeHomeScene) {
 
     draw(ctx) {
       ctx.fillStyle = '#2f5d4f';
-      ctx.fillRect(0, 0, screen.W, screen.H);
+      ctx.fillRect(0, 0, viewport.W, viewport.H);
       const bg = img('splash_bg');
-      if (bg) drawCover(ctx, bg, { x: 0, y: 0, w: screen.W, h: screen.H });
+      if (bg) drawCover(ctx, bg, { x: 0, y: 0, w: viewport.W, h: viewport.H });
 
-      const footerY = screen.H - screen.safeBottom - vh(20);
+      const footerY = viewport.H - viewport.safeBottom - vh(20);
       const badge = { x: vw(6), y: footerY, w: vw(15), h: vw(15) };
       drawContain(ctx, img('age_badge'), badge);
 
       const textX = badge.x + badge.w + vw(3);
-      const textW = screen.W - textX - vw(6);
+      const textW = viewport.W - textX - vw(6);
       text(ctx, '健康游戏忠告', textX, footerY + vh(1.2),
         { align: 'left', baseline: 'top', size: rem(0.82), weight: 'bold', color: '#fff', stroke: 'rgba(0,0,0,.45)' });
 
@@ -93,7 +93,7 @@ function createSplashScene(makeHomeScene) {
           { align: 'left', baseline: 'top', size: rem(0.62), color: 'rgba(255,255,255,.92)', stroke: 'rgba(0,0,0,.4)' });
       });
 
-      const track = { x: vw(12), y: screen.H - screen.safeBottom - vh(6), w: vw(76), h: vh(1.1) };
+      const track = { x: vw(12), y: viewport.H - viewport.safeBottom - vh(6), w: vw(76), h: vh(1.1) };
       ctx.fillStyle = 'rgba(255,255,255,.28)';
       roundRect(ctx, track, track.h / 2);
       ctx.fill();

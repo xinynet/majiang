@@ -1346,3 +1346,61 @@ node mp-tools/audit-precheck.cjs
    但那版已经验收通过，这一轮没动它。
 3. 上线前：`src/ads.js` 的 `API_BASE` 换成线上 https 地址，并在小游戏后台
    「开发设置 - 服务器域名」把它加进 request 合法域名。
+
+---
+
+# R8 开发者工具里跑不起来：一个只在微信运行时暴露的撞名
+
+- 日期：2026-09-18
+- 症状：浏览器预览一切正常，导入微信开发者工具（项目类型「小游戏」+ 测试 AppID）后白屏，
+  控制台：
+
+```
+SyntaxError: MiniProgramError
+Identifier 'screen' has already been declared
+Error: MiniProgramError
+module 'src/screen.js' is not defined, require args is './src/screen.js'
+```
+
+## 原因
+
+小游戏运行时把每个模块包在一个函数里执行，**那个作用域里已经有一个 `screen`**
+（浏览器风格的全局）。我们的 `src/screen.js` 在模块顶层写了 `const screen = {...}`，
+于是**加载期**就是语法错误：模块注册不上 → 后面所有 `require('./screen.js')` 报
+`module ... is not defined` → 整个游戏起不来。
+
+关键在于：**浏览器预览的打包器不注入这些名字，预览里完全正常。**
+这类问题只有装进微信才暴露，反馈回路最长。
+
+## 修法
+
+`screen` 这个对象改名 `viewport`（`src/screen.js` 的导出、以及 app / ui / modals /
+四个场景里的引用）。文件名 `screen.js` 保留，文件头写清楚了为什么不能叫 `screen`。
+
+顺带被新加的检查抓出第二处同类隐患：`probe.js` 顶层的 `const canvas`，一并改名。
+
+## 用静态检查钉住
+
+新增 `mp-tools/minigame-lint.cjs`，查三件只在小游戏运行时才犯的错：
+
+1. 模块顶层标识符撞上运行时注入的全局（上面这件事）；
+2. ESM 语法（`import` / `export`）——小游戏运行时是 CommonJS；
+3. `game.js` 的 `DEBUG_SCENE` 提交前是否清空。
+
+清单里真正被实测证明会撞的只有 `screen`，其余是预防性的（改一个撞名的局部变量成本几乎为零，
+漏一个的代价是装进微信才发现起不来）。
+
+## 关于「我能不能自己在开发者工具里验」
+
+这一轮又试了一遍，结论更清楚了：
+
+- **项目类型只能在 GUI 的导入对话框里选。** `cli open` / `open-other` 都没有类型参数；
+  把整个项目复制到一个工具从没见过的新路径再用 CLI 打开，依然按 `platform=mini-weixin` 编译。
+- **IDE 的日志文件不收游戏控制台。** `WeappLog/logs/*.log` 里只有 IDE 自己的事件，
+  游戏里的 `SyntaxError` 不落盘，只在控制台面板里。
+- **`compileHotReLoad` 默认关着**，所以我从 CLI `open` 一次并不会触发重新编译，
+  工具里显示的还是上一次编译的结果——改完代码需要人在工具里按一次「编译」。
+- 能自动判定的信号有一个：游戏一旦真的跑起来，`store.js` 会在 50ms 内落盘，
+  开发者工具把它写到 `User Data/<hash>/WeappLocalData/localstorage_*.json`，
+  Node 可以直接读。**存档键出现 = 至少启动成功了。** 这次读出来是「没有」，
+  与「加载期就崩」一致。

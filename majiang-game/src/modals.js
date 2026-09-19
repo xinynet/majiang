@@ -20,7 +20,7 @@
  *   2. 「添加到桌面」的 200 金币，小程序每点一次发一次；这里认 desktopRewardClaimed
  *      标记只发一次——那个字段本来就在存档里，白送无限金币不该是有意设计。
  */
-const { screen } = require('./screen.js');
+const { viewport } = require('./screen.js');
 const {
   gameState, addCoins, spendCoins, addTool, refundStamina, formatLongSeconds,
 } = require('./store.js');
@@ -293,8 +293,8 @@ function createModals() {
 
   function drawOverlay(ctx) {
     ctx.fillStyle = C.mask;
-    ctx.fillRect(0, 0, screen.W, screen.H);
-    hit({ x: 0, y: 0, w: screen.W, h: screen.H }, close);
+    ctx.fillRect(0, 0, viewport.W, viewport.H);
+    hit({ x: 0, y: 0, w: viewport.W, h: viewport.H }, close);
   }
 
   function drawSettings(ctx) {
@@ -535,9 +535,9 @@ function createModals() {
     const ch = card ? w * card.height / card.width : vh(40);
     const bh = btn ? vw(60) * btn.height / btn.width : vh(7);
     const total = ch + vh(2) + bh;
-    const top = (screen.H - total) / 2;
+    const top = (viewport.H - total) / 2;
 
-    const cardRect = { x: (screen.W - w) / 2, y: top, w, h: ch };
+    const cardRect = { x: (viewport.W - w) / 2, y: top, w, h: ch };
     drawContain(ctx, card, cardRect);
     hit(cardRect, () => {});
     /* 关闭的 ✕ 是烤在卡片美术里的，位置在标题条右端（约整图的 97% 宽、31% 高），
@@ -547,7 +547,7 @@ function createModals() {
       w: cardRect.w * 0.14, h: cardRect.h * 0.13,
     }, close);
 
-    const btnRect = { x: (screen.W - vw(60)) / 2, y: top + ch + vh(2), w: vw(60), h: bh };
+    const btnRect = { x: (viewport.W - vw(60)) / 2, y: top + ch + vh(2), w: vw(60), h: bh };
     drawContain(ctx, btn, btnRect);
     hit(btnRect, addToDesktop);
   }
@@ -704,8 +704,8 @@ function createModals() {
   /** 模拟激励视频。真接广告要换成 wx.createRewardedVideoAd，回调位置就是 ad.cb。 */
   function drawAd(ctx) {
     ctx.fillStyle = 'rgba(0,0,0,.86)';
-    ctx.fillRect(0, 0, screen.W, screen.H);
-    hit({ x: 0, y: 0, w: screen.W, h: screen.H }, () => {});   // 广告期间吞掉所有点击
+    ctx.fillRect(0, 0, viewport.W, viewport.H);
+    hit({ x: 0, y: 0, w: viewport.W, h: viewport.H }, () => {});   // 广告期间吞掉所有点击
 
     const box = { x: vw(8), y: vh(32), w: vw(84), h: vh(34) };
     ctx.fillStyle = '#12211d';
